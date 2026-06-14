@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sailing Forecast Builder</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/styles.css?v=20260614-3">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="left-column">
+      <section class="map-pane" aria-label="Venue map">
+        <div id="map"></div>
+      </section>
+
+      <section class="sidebar">
+        <header>
+          <h1>Sailing Forecast Builder</h1>
+          <p>Venue, course and model setup</p>
+        </header>
+
+        <form id="forecast-form" class="control-stack">
+          <div class="row">
+            <label>
+              Event
+              <input name="event" value="Training forecast">
+            </label>
+            <label>
+              Team
+              <input name="team" placeholder="Optional">
+            </label>
+          </div>
+          <label>
+            Synoptic chart
+            <input name="synoptic_chart_url" value="https://www.weathercharts.org/ukmomslp.htm#t0">
+          </label>
+          <div class="row row-3">
+            <label>
+              Date
+              <input name="date" type="date" required>
+            </label>
+            <label>
+              Days
+              <select name="forecast_days">
+                <option value="1" selected>1 day</option>
+                <option value="2">2 days</option>
+              </select>
+            </label>
+            <label>
+              Issue
+              <input name="issue_time" placeholder="0800">
+            </label>
+          </div>
+          <div class="row row-4">
+            <label>
+              Start
+              <input name="start_hour" type="number" min="0" max="23" value="10">
+            </label>
+            <label>
+              End
+              <input name="end_hour" type="number" min="0" max="23" value="18">
+            </label>
+            <label>
+              Radius nm
+              <input id="race-radius" name="race_radius_nm" type="number" min="0.2" step="0.1" value="2.0">
+            </label>
+            <label>
+              Grid
+              <select name="area_grid_size">
+                <option value="9">9 x 9</option>
+                <option value="15" selected>15 x 15</option>
+                <option value="21">21 x 21</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Venue name
+            <input id="venue-name" name="venue_name" value="Custom venue" required>
+          </label>
+          <div class="row">
+            <label>
+              Latitude
+              <input id="venue-latitude" name="latitude" type="number" step="0.0001" required>
+            </label>
+            <label>
+              Longitude
+              <input id="venue-longitude" name="longitude" type="number" step="0.0001" required>
+            </label>
+          </div>
+          <div class="row">
+            <label>
+              Race area
+              <input id="race-area-name" name="race_area_name" value="Race area">
+            </label>
+            <label>
+              Forecast map view
+              <select name="area_map_mode">
+                <option value="barbs">Wind barbs</option>
+                <option value="streamlines">Streamlines</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Primary model
+            <select id="model-select" name="model"></select>
+          </label>
+          <fieldset>
+            <legend>Comparison models</legend>
+            <div id="compare-models" class="check-grid"></div>
+          </fieldset>
+          <p id="model-note" class="status">Loading model catalog...</p>
+          <button type="submit">Generate Report</button>
+        </form>
+      </section>
+    </section>
+
+    <section class="report-pane">
+      <div class="report-toolbar">
+        <span id="status" class="status">Click the map to set a venue, then generate a forecast.</span>
+        <label class="compact-control">
+          Wind map
+          <select id="wind-map-time" disabled>
+            <option>No forecast</option>
+          </select>
+        </label>
+        <button id="print-report" type="button" disabled>Print Report</button>
+      </div>
+      <iframe id="report-frame" title="Forecast report preview"></iframe>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/app.js?v=20260614-3"></script>
+</body>
+</html>

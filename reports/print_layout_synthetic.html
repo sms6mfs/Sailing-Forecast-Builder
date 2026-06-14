@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Print Test Sailing Forecast</title>
+  <style>
+    :root {
+      --ink: #172027;
+      --muted: #5a6670;
+      --line: #d8e0e5;
+      --panel: #f6f8f9;
+      --blue: #1e6a8d;
+      --teal: #1d7b72;
+      --gold: #b77812;
+      --red: #b84b42;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #eef3f5;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.35;
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px;
+      background: white;
+      min-height: 100vh;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      border-bottom: 3px solid var(--ink);
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 30px; margin-bottom: 6px; letter-spacing: 0; }
+    h2 { font-size: 17px; margin-bottom: 10px; }
+    h3 { font-size: 14px; margin-bottom: 7px; color: var(--muted); text-transform: uppercase; }
+    .meta {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+    .brief {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .band, .panel {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+      background: var(--panel);
+    }
+    .band {
+      border-left: 6px solid var(--blue);
+      background: #ffffff;
+    }
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .fact {
+      border-left: 4px solid var(--teal);
+      padding-left: 10px;
+    }
+    .fact b {
+      display: block;
+      font-size: 20px;
+    }
+    .fact span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    th {
+      text-align: left;
+      background: var(--ink);
+      color: white;
+      padding: 7px 8px;
+      font-weight: 700;
+    }
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+    }
+    td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+    li { margin-bottom: 7px; }
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .chart svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .panel svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .wind-map-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .wind-map h3 {
+      margin-bottom: 6px;
+      color: var(--ink);
+      text-transform: none;
+      font-size: 14px;
+    }
+    .tile-map {
+      position: relative;
+      width: 100%;
+      max-width: 768px;
+      aspect-ratio: 1;
+      margin: 0 auto;
+      overflow: hidden;
+      background: #d8e0e5;
+      border: 2px solid var(--ink);
+      border-radius: 4px;
+    }
+    .tile-map img {
+      position: absolute;
+      width: 33.3334%;
+      height: 33.3334%;
+      object-fit: cover;
+    }
+    .tile-map .venue-dot {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
+      margin-top: -7px;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 0 2px var(--ink);
+      z-index: 4;
+    }
+    .tile-map .race-radius {
+      position: absolute;
+      border: 3px solid var(--blue);
+      border-radius: 50%;
+      background: rgba(30, 106, 141, 0.12);
+      z-index: 3;
+      transform: translate(-50%, -50%);
+    }
+    .tile-map .wind-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      border: 0 !important;
+      pointer-events: none;
+    }
+    .forecast-tile-map {
+      max-width: 520px;
+    }
+    .map-caption {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .synoptic-source {
+      display: inline-block;
+      color: var(--blue);
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .synoptic-image {
+      width: 100%;
+      max-height: 560px;
+      object-fit: contain;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .swatch {
+      display: inline-block;
+      width: 18px;
+      height: 3px;
+      margin-right: 5px;
+      vertical-align: middle;
+      background: var(--blue);
+    }
+    .speed-cell {
+      font-weight: 700;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    footer {
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    .print-page {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .print-break-before {
+      break-before: page;
+      page-break-before: always;
+    }
+    .print-avoid {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    @media print {
+      @page { size: A4; margin: 8mm; }
+      html, body {
+        width: 210mm;
+        background: white;
+      }
+      body {
+        font-size: 10px;
+        line-height: 1.18;
+      }
+      .page {
+        max-width: none;
+        padding: 0;
+        min-height: auto;
+      }
+      header {
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        padding-bottom: 7px;
+        margin-bottom: 8px;
+        border-bottom-width: 2px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      h1 { font-size: 20px; margin-bottom: 2px; }
+      h2 { font-size: 12px; margin-bottom: 5px; }
+      h3 { font-size: 10px; margin-bottom: 3px; }
+      p { margin-bottom: 0; }
+      .meta { font-size: 8.5px; gap: 1px; }
+      .brief {
+        grid-template-columns: 1.9fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .band, .panel {
+        border-radius: 4px;
+        padding: 7px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .band { border-left-width: 4px; }
+      .facts { gap: 6px; }
+      .fact { border-left-width: 3px; padding-left: 6px; }
+      .fact b { font-size: 14px; }
+      .fact span { font-size: 8px; }
+      section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      table {
+        font-size: 8px;
+        margin-bottom: 7px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      th, td {
+        padding: 3px 4px;
+      }
+      thead {
+        display: table-header-group;
+      }
+      tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      ul { padding-left: 12px; }
+      li { margin-bottom: 3px; }
+      .synoptic-image {
+        max-height: 96mm;
+      }
+      .charts {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .chart {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .chart svg {
+        max-height: 44mm;
+      }
+      .grid-2 {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+      .wind-map-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px 6px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .wind-map {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        min-width: 0;
+      }
+      .wind-map h3 {
+        font-size: 9px;
+        margin-bottom: 2px;
+      }
+      .forecast-tile-map {
+        width: 100%;
+        max-width: 86mm;
+      }
+      .tile-map {
+        border-width: 1px;
+        aspect-ratio: 1 / 1;
+      }
+      .forecast-map-section .tile-map {
+        width: 100%;
+        max-height: 86mm;
+      }
+      .forecast-map-section .wind-overlay {
+        max-height: 86mm;
+      }
+      .map-caption {
+        margin-top: 4px;
+        font-size: 8px;
+      }
+      .legend {
+        gap: 7px;
+        font-size: 8px;
+        margin-top: 2px;
+      }
+      .print-page + .print-page {
+        padding-top: 0;
+      }
+      .print-compact-panel {
+        padding: 5px;
+      }
+      .print-compact-panel li {
+        margin-bottom: 2px;
+      }
+      .profile-section svg {
+        max-height: 82mm;
+      }
+      .forecast-map-section {
+        margin-bottom: 6px !important;
+      }
+      footer {
+        font-size: 8px;
+        padding-top: 5px;
+      }
+    }
+    @media screen and (max-width: 800px) {
+      .page { padding: 18px; }
+      header, .brief, .grid-2, .charts, .wind-map-grid { grid-template-columns: 1fr; }
+      .meta { text-align: left; }
+      .facts { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="print-page">
+      <header>
+        <div>
+          <h1>Training forecast</h1>
+          <p>Print Test - Mixed gradient and thermal day</p>
+        </div>
+        <div class="meta">
+          <div>Team: n/a</div>
+          <div>Forecaster: Sailing Forecast Builder</div>
+          <div>Issue: 2026-06-14</div>
+          <div>Date: 2026-06-14</div>
+          <div>Race window: 1000-1800 local</div>
+          <div>Race area: Race area</div>
+          <div>Primary model: test</div>
+          <div>Confidence: high (8/10)</div>
+          <div>Source: Open-Meteo forecast and marine APIs</div>
+        </div>
+      </header>
+
+      <section class="brief">
+        <div class="band">
+          <h2>Executive Brief</h2>
+          <p>Mixed gradient and thermal day. Breeze starts around 200 at 9 kt and finishes around 200 at 9 kt; speed trend is fairly level, direction trend is mostly oscillatory with little net trend. Expected gust-lull delta is about 5 kt, with the largest tactical value in pressure differences when the breeze is under 8 kt or cloud increases.</p>
+        </div>
+        <div class="panel">
+          <h2>Key Numbers</h2>
+          
+        <div class="facts">
+          <div class="fact"><b>9-9 kt</b><span>Mean wind range</span></div>
+          <div class="fact"><b>14 kt</b><span>Peak forecast gust</span></div>
+          <div class="fact"><b>0 deg</b><span>Net direction change</span></div>
+        </div>
+    
+        </div>
+      </section>
+
+      
+
+      <section class="print-avoid">
+        <h2>925 hPa Wind</h2>
+        <table><thead><tr><th>Time</th><th>11:00 local</th><th>13:00 local</th><th>15:00 local</th><th>17:00 local</th></tr></thead><tbody><tr><th>925 hPa TWD</th><td class="num">220</td><td class="num">220</td><td class="num">220</td><td class="num">220</td></tr><tr><th>925 hPa TWS</th><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td></tr></tbody></table>
+      </section>
+
+      <section class="print-avoid">
+        <h2>Hourly Sailing Wind</h2>
+        <table><thead><tr><th>Time</th><th>TWD</th><th>TWD range</th><th>TWS</th><th>TWS range</th><th>Gust</th><th>Lull</th><th>Phase</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1000</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1100</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1200</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1300</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1400</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1500</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1600</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1700</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1800</td><td class="num">200</td><td class="num">185-215</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">9 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5-13 kt</td><td class="num speed-cell" style="background-color:rgb(255,255,0) !important; color:#172027 !important;">14 kt</td><td class="num speed-cell" style="background-color:rgb(0,176,80) !important; color:#ffffff !important;">5 kt</td><td>gust-led</td><td>noticeable gust-lull spread</td></tr></tbody></table>
+      </section>
+    </div>
+
+    <div class="print-page print-break-before">
+      <section class="panel forecast-map-section">
+        <h2>Forecast Area Wind Maps</h2>
+        <div class="wind-map-grid"><div class="wind-map"><h3>11:00 local Wind Map</h3><div class="tile-map forecast-tile-map"><img src="https://tile.openstreetmap.org/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><svg class="wind-overlay" viewBox="0 0 520 520" role="img" aria-label="Forecast area weather map"><rect x="1" y="1" width="518" height="518" fill="none" stroke="#172027" stroke-width="2" /><rect x="8" y="8" width="126" height="36" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="18" y="24" font-size="11" fill="#5a6670">N</text><path d="M26,36 L26,14 M26,14 L20,24 M26,14 L32,24" stroke="#172027" stroke-width="2" fill="none" stroke-linecap="round" /><text x="44" y="24" font-size="10" fill="#5a6670">11:00 local</text><text x="44" y="37" font-size="10" fill="#5a6670">Wind barbs | 10 m wind</text><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="341.3" y="317.0" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="349.2" y="304.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="357.1" y="292.1" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="364.9" y="279.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="372.8" y="267.1" text-anchor="middle" font-size="8" fill="#172027">8</text><circle cx="341.3" cy="297.0" r="207.7" fill="#1e6a8d" fill-opacity="0.12" stroke="#1e6a8d" stroke-width="2" /><circle cx="341.3" cy="297.0" r="5" fill="#b84b42" stroke="#ffffff" stroke-width="2" /><text x="341.3" y="283.0" text-anchor="middle" font-size="11" fill="#172027">Race area</text><rect x="8" y="492" width="132" height="18" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="16" y="505" font-size="10" fill="#5a6670">TWS 8-8 kt</text></svg></div></div><div class="wind-map"><h3>13:00 local Wind Map</h3><div class="tile-map forecast-tile-map"><img src="https://tile.openstreetmap.org/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><svg class="wind-overlay" viewBox="0 0 520 520" role="img" aria-label="Forecast area weather map"><rect x="1" y="1" width="518" height="518" fill="none" stroke="#172027" stroke-width="2" /><rect x="8" y="8" width="126" height="36" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="18" y="24" font-size="11" fill="#5a6670">N</text><path d="M26,36 L26,14 M26,14 L20,24 M26,14 L32,24" stroke="#172027" stroke-width="2" fill="none" stroke-linecap="round" /><text x="44" y="24" font-size="10" fill="#5a6670">13:00 local</text><text x="44" y="37" font-size="10" fill="#5a6670">Wind barbs | 10 m wind</text><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="341.3" y="317.0" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="349.2" y="304.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="357.1" y="292.1" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="364.9" y="279.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="372.8" y="267.1" text-anchor="middle" font-size="8" fill="#172027">8</text><circle cx="341.3" cy="297.0" r="207.7" fill="#1e6a8d" fill-opacity="0.12" stroke="#1e6a8d" stroke-width="2" /><circle cx="341.3" cy="297.0" r="5" fill="#b84b42" stroke="#ffffff" stroke-width="2" /><text x="341.3" y="283.0" text-anchor="middle" font-size="11" fill="#172027">Race area</text><rect x="8" y="492" width="132" height="18" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="16" y="505" font-size="10" fill="#5a6670">TWS 8-8 kt</text></svg></div></div><div class="wind-map"><h3>15:00 local Wind Map</h3><div class="tile-map forecast-tile-map"><img src="https://tile.openstreetmap.org/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><svg class="wind-overlay" viewBox="0 0 520 520" role="img" aria-label="Forecast area weather map"><rect x="1" y="1" width="518" height="518" fill="none" stroke="#172027" stroke-width="2" /><rect x="8" y="8" width="126" height="36" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="18" y="24" font-size="11" fill="#5a6670">N</text><path d="M26,36 L26,14 M26,14 L20,24 M26,14 L32,24" stroke="#172027" stroke-width="2" fill="none" stroke-linecap="round" /><text x="44" y="24" font-size="10" fill="#5a6670">15:00 local</text><text x="44" y="37" font-size="10" fill="#5a6670">Wind barbs | 10 m wind</text><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="341.3" y="317.0" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="349.2" y="304.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="357.1" y="292.1" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="364.9" y="279.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="372.8" y="267.1" text-anchor="middle" font-size="8" fill="#172027">8</text><circle cx="341.3" cy="297.0" r="207.7" fill="#1e6a8d" fill-opacity="0.12" stroke="#1e6a8d" stroke-width="2" /><circle cx="341.3" cy="297.0" r="5" fill="#b84b42" stroke="#ffffff" stroke-width="2" /><text x="341.3" y="283.0" text-anchor="middle" font-size="11" fill="#172027">Race area</text><rect x="8" y="492" width="132" height="18" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="16" y="505" font-size="10" fill="#5a6670">TWS 8-8 kt</text></svg></div></div><div class="wind-map"><h3>17:00 local Wind Map</h3><div class="tile-map forecast-tile-map"><img src="https://tile.openstreetmap.org/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2748.png" alt="" style="left:0.0000%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2748.png" alt="" style="left:33.3334%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2748.png" alt="" style="left:66.6668%; top:0.0000%;"><img src="https://tile.openstreetmap.org/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2749.png" alt="" style="left:0.0000%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2749.png" alt="" style="left:33.3334%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2749.png" alt="" style="left:66.6668%; top:33.3334%;"><img src="https://tile.openstreetmap.org/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4069/2750.png" alt="" style="left:0.0000%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4070/2750.png" alt="" style="left:33.3334%; top:66.6668%;"><img src="https://tile.openstreetmap.org/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><img src="https://tiles.openseamap.org/seamark/13/4071/2750.png" alt="" style="left:66.6668%; top:66.6668%;"><svg class="wind-overlay" viewBox="0 0 520 520" role="img" aria-label="Forecast area weather map"><rect x="1" y="1" width="518" height="518" fill="none" stroke="#172027" stroke-width="2" /><rect x="8" y="8" width="126" height="36" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="18" y="24" font-size="11" fill="#5a6670">N</text><path d="M26,36 L26,14 M26,14 L20,24 M26,14 L32,24" stroke="#172027" stroke-width="2" fill="none" stroke-linecap="round" /><text x="44" y="24" font-size="10" fill="#5a6670">17:00 local</text><text x="44" y="37" font-size="10" fill="#5a6670">Wind barbs | 10 m wind</text><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M341.3,297.0 L331.8,313.5 M332.5,312.2 L330.0,307.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="341.3" y="317.0" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M345.2,290.8 L335.7,307.3 M336.5,306.0 L334.0,301.6" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M349.2,284.6 L339.7,301.0 M340.4,299.7 L337.9,295.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="349.2" y="304.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M353.1,278.3 L343.6,294.8 M344.4,293.5 L341.9,289.1" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M357.1,272.1 L347.6,288.5 M348.3,287.2 L345.8,282.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="357.1" y="292.1" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M361.0,265.8 L351.5,282.3 M352.2,281.0 L349.7,276.7" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M364.9,259.6 L355.4,276.0 M356.2,274.7 L353.7,270.4" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="364.9" y="279.6" text-anchor="middle" font-size="8" fill="#172027">8</text><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M368.9,253.4 L359.4,269.8 M360.1,268.5 L357.6,264.2" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" /><path d="M372.8,247.1 L363.3,263.6 M364.1,262.3 L361.6,257.9" stroke="rgb(0,176,80)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" /><text x="372.8" y="267.1" text-anchor="middle" font-size="8" fill="#172027">8</text><circle cx="341.3" cy="297.0" r="207.7" fill="#1e6a8d" fill-opacity="0.12" stroke="#1e6a8d" stroke-width="2" /><circle cx="341.3" cy="297.0" r="5" fill="#b84b42" stroke="#ffffff" stroke-width="2" /><text x="341.3" y="283.0" text-anchor="middle" font-size="11" fill="#172027">Race area</text><rect x="8" y="492" width="132" height="18" rx="4" fill="#ffffff" fill-opacity="0.86" stroke="#d8e0e5" /><text x="16" y="505" font-size="10" fill="#5a6670">TWS 8-8 kt</text></svg></div></div></div>
+      </section>
+
+      <section class="charts">
+        <div class="chart">
+          <h2>Wind Speed By Model</h2>
+          <svg viewBox="0 0 520 250" role="img" aria-label="speed chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">16</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">11</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">7</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">3</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-2</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polygon points="44.0,37.2 101.2,37.2 158.5,37.2 215.8,37.2 273.0,37.2 330.2,37.2 387.5,37.2 444.8,37.2 502.0,37.2 502.0,139.8 444.8,139.8 387.5,139.8 330.2,139.8 273.0,139.8 215.8,139.8 158.5,139.8 101.2,139.8 44.0,139.8" fill="#1e6a8d" opacity="0.14" /><polyline points="44.0,94.2 101.2,94.2 158.5,94.2 215.8,94.2 273.0,94.2 330.2,94.2 387.5,94.2 444.8,94.2 502.0,94.2" fill="none" stroke="#5a6670" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+          <div class="legend"><span><span class="swatch" style="background: rgba(30, 106, 141, 0.28)"></span>Gust-lull range</span><span><span class="swatch" style="background: #5a6670"></span>test</span></div>
+        </div>
+        <div class="chart">
+          <h2>Wind Direction By Model</h2>
+          <svg viewBox="0 0 520 250" role="img" aria-label="direction chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">201</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">201</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">200</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">199</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">199</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,117.0 101.2,117.0 158.5,117.0 215.8,117.0 273.0,117.0 330.2,117.0 387.5,117.0 444.8,117.0 502.0,117.0" fill="none" stroke="#5a6670" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+          <div class="legend"><span><span class="swatch" style="background: #5a6670"></span>test</span></div>
+        </div>
+        <div class="chart">
+          <h2>Cloud And Boundary Layer</h2>
+          <svg viewBox="0 0 520 250" role="img" aria-label="cloud chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">112</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">81</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">50</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">19</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-12</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,141.0 101.2,141.0 158.5,141.0 215.8,141.0 273.0,141.0 330.2,141.0 387.5,141.0 444.8,141.0 502.0,141.0" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1" /><polyline points="44.0,37.2 101.2,37.2 158.5,37.2 215.8,37.2 273.0,37.2 330.2,37.2 387.5,37.2 444.8,37.2 502.0,37.2" fill="none" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="1" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+          <div class="legend">
+            <span><span class="swatch" style="background: var(--blue)"></span>Cloud %</span>
+            <span><span class="swatch" style="background: var(--teal)"></span>Boundary layer</span>
+          </div>
+        </div>
+        <div class="chart">
+          <h2>Sea State</h2>
+          <svg viewBox="0 0 520 250" role="img" aria-label="No chart data"><rect x="0" y="0" width="100%" height="100%" fill="#ffffff" /><text x="260.0" y="125.0" text-anchor="middle" fill="#5a6670">No data available</text></svg>
+          <div class="legend">
+            <span><span class="swatch" style="background: var(--blue)"></span>Wave height</span>
+          </div>
+        </div>
+      </section>
+      <section class="grid-2">
+        <div class="panel print-compact-panel">
+          <h2>Meteorology</h2>
+          <ul><li>Surface flow averages 200 at 9 kt through the race window.</li><li>925 hPa gradient averages 220 at 14 kt; surface-gradient separation is about 20 degrees.</li><li>Cloud cover averages 35%, so cloud impact is limited.</li><li>Boundary layer height averages about 800 m; mixing potential is good.</li><li>Air-SST contrast averages +5.0 C (23.0 C air vs 18.0 C sea); supports a thermally driven onshore component if the gradient allows it.</li><li>Cloud trend is fairly steady (35% to 35%) with mean shortwave radiation around 450 W/m2.</li><li>MSLP tendency is near steady, changing +0.0 hPa across the race window.</li><li>Race-area pressure spread is little changed: 0.0 hPa at 11:00 local to 0.0 hPa at 17:00 local.</li><li>Sea-breeze potential score is 9/10: warm air over cooler sea, usable solar input, low cloud cover, gradient is light to moderate, boundary layer can mix.</li><li>CAPE is low, so gusts should mostly come from mixing, terrain and pressure patches rather than deep convection.</li></ul>
+        </div>
+        <div class="panel print-compact-panel">
+          <h2>Venue Effects</h2>
+          <ul><li>Race area: Race area, centered near 50.800, -1.100, radius about 2 nm.</li><li>No venue-specific shoreline or topographic rules are configured yet; treat local-effect notes as provisional.</li></ul>
+        </div>
+      </section>
+
+      
+
+      
+    </div>
+
+    <footer>
+      Generated for planning and race briefing. Forecast date resolved from local venue time. 
+    </footer>
+  </main>
+</body>
+</html>

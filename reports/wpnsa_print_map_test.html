@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>WPNSA Sailing Forecast</title>
+  <style>
+    :root {
+      --ink: #172027;
+      --muted: #5a6670;
+      --line: #d8e0e5;
+      --panel: #f6f8f9;
+      --blue: #1e6a8d;
+      --teal: #1d7b72;
+      --gold: #b77812;
+      --red: #b84b42;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #eef3f5;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.35;
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px;
+      background: white;
+      min-height: 100vh;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      border-bottom: 3px solid var(--ink);
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 30px; margin-bottom: 6px; letter-spacing: 0; }
+    h2 { font-size: 17px; margin-bottom: 10px; }
+    h3 { font-size: 14px; margin-bottom: 7px; color: var(--muted); text-transform: uppercase; }
+    .meta {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+    .brief {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .band, .panel {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+      background: var(--panel);
+    }
+    .band {
+      border-left: 6px solid var(--blue);
+      background: #ffffff;
+    }
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .fact {
+      border-left: 4px solid var(--teal);
+      padding-left: 10px;
+    }
+    .fact b {
+      display: block;
+      font-size: 20px;
+    }
+    .fact span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    th {
+      text-align: left;
+      background: var(--ink);
+      color: white;
+      padding: 7px 8px;
+      font-weight: 700;
+    }
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+    }
+    td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+    li { margin-bottom: 7px; }
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .chart svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .panel svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .swatch {
+      display: inline-block;
+      width: 18px;
+      height: 3px;
+      margin-right: 5px;
+      vertical-align: middle;
+      background: var(--blue);
+    }
+    footer {
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    @media print {
+      body { background: white; }
+      .page { max-width: none; padding: 12mm; }
+    }
+    @media (max-width: 800px) {
+      .page { padding: 18px; }
+      header, .brief, .grid-2, .charts { grid-template-columns: 1fr; }
+      .meta { text-align: left; }
+      .facts { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>Training forecast</h1>
+        <p>WPNSA - Cloud-modulated gradient day</p>
+      </div>
+      <div class="meta">
+        <div>Team: n/a</div>
+        <div>Forecaster: Sailing Forecast Builder</div>
+        <div>Issue: 2026-06-12</div>
+        <div>Date: 2026-06-12</div>
+        <div>Race window: 1000-1800 local</div>
+        <div>Race area: Race area</div>
+        <div>Primary model: best_match</div>
+        <div>Confidence: high (7/10)</div>
+        <div>Source: Open-Meteo forecast and marine APIs</div>
+      </div>
+    </header>
+
+    <section class="brief">
+      <div class="band">
+        <h2>Executive Brief</h2>
+        <p>Cloud-modulated gradient day. Breeze starts around 240 at 17 kt and finishes around 240 at 13 kt; speed trend is easing, direction trend is mostly oscillatory with little net trend. Expected gust-lull delta is about 11 kt, with the largest tactical value in pressure differences when the breeze is under 8 kt or cloud increases.</p>
+      </div>
+      <div class="panel">
+        <h2>Key Numbers</h2>
+        
+        <div class="facts">
+          <div class="fact"><b>12-18 kt</b><span>Mean wind range</span></div>
+          <div class="fact"><b>32 kt</b><span>Peak forecast gust</span></div>
+          <div class="fact"><b>0 deg</b><span>Net direction change</span></div>
+        </div>
+    
+      </div>
+    </section>
+
+    <section>
+      <h2>Hourly Sailing Wind</h2>
+      <table><thead><tr><th>Time</th><th>TWD</th><th>TWD range</th><th>TWS</th><th>TWS range</th><th>Gust</th><th>Lull</th><th>Phase</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1000</td><td class="num">240</td><td class="num">210-270</td><td class="num">17</td><td class="num">11-22</td><td class="num">29</td><td class="num">9</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1100</td><td class="num">240</td><td class="num">210-270</td><td class="num">18</td><td class="num">13-24</td><td class="num">32</td><td class="num">10</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1200</td><td class="num">240</td><td class="num">210-270</td><td class="num">17</td><td class="num">11-22</td><td class="num">29</td><td class="num">9</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1300</td><td class="num">240</td><td class="num">210-270</td><td class="num">17</td><td class="num">12-23</td><td class="num">30</td><td class="num">9</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1400</td><td class="num">230</td><td class="num">200-260</td><td class="num">15</td><td class="num">10-21</td><td class="num">27</td><td class="num">7</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1500</td><td class="num">230</td><td class="num">205-255</td><td class="num">14</td><td class="num">9-20</td><td class="num">24</td><td class="num">6</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1600</td><td class="num">240</td><td class="num">215-265</td><td class="num">12</td><td class="num">7-18</td><td class="num">21</td><td class="num">5</td><td>shifty</td><td>surface breeze is bent away from gradient; cloud may soften pressure; noticeable gust-lull spread</td></tr><tr><td class="num">1700</td><td class="num">240</td><td class="num">215-265</td><td class="num">13</td><td class="num">7-18</td><td class="num">22</td><td class="num">6</td><td>shifty</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr><tr><td class="num">1800</td><td class="num">240</td><td class="num">220-260</td><td class="num">13</td><td class="num">8-18</td><td class="num">22</td><td class="num">8</td><td>shifty</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr></tbody></table>
+    </section>
+
+    <section class="panel" style="margin-bottom: 18px;">
+      <h2>Course Area</h2>
+      <svg viewBox="0 0 720 230" role="img" aria-label="Course area map"><rect x="1" y="1" width="718" height="228" fill="#ffffff" stroke="#172027" stroke-width="1.5" /><line x1="36" y1="200" x2="684" y2="200" stroke="#9aa6ad" /><line x1="36" y1="30" x2="36" y2="200" stroke="#9aa6ad" /><text x="42" y="46" font-size="11" fill="#5a6670">N</text><path d="M50,58 L50,34 M50,34 L44,44 M50,34 L56,44" stroke="#172027" stroke-width="2" fill="none" stroke-linecap="round" /><text x="360.0" y="105.0" text-anchor="middle" font-size="12" fill="#172027">WPNSA</text><circle cx="360.0" cy="115.0" r="5" fill="#172027" /><circle cx="360.0" cy="115.0" r="22.0" fill="#ffffff" fill-opacity="0.7" stroke="#1e6a8d" stroke-width="4" /><text x="360.0" y="152.0" text-anchor="middle" font-size="12" fill="#172027">Race area</text></svg>
+    </section>
+
+    <section class="panel" style="margin-bottom: 18px;">
+      <h2>Forecast Area Weather Map</h2>
+      <svg viewBox="0 0 720 300" role="img" aria-label="Forecast area weather map"><rect x="1" y="1" width="718" height="298" fill="#ffffff" stroke="#172027" stroke-width="1.5" /><line x1="38" y1="262" x2="682" y2="262" stroke="#9aa6ad" /><line x1="38" y1="38" x2="38" y2="262" stroke="#9aa6ad" /><text x="46" y="53" font-size="11" fill="#5a6670">N</text><path d="M54,67 L54,45 M54,45 L48,55 M54,45 L60,55" stroke="#172027" stroke-width="2" fill="none" stroke-linecap="round" /><text x="38" y="24" font-size="12" fill="#5a6670">Map time: 1400 local | Wind arrows show TWD/TWS, color shows gusts, shading shows cloud.</text><text x="682" y="24" text-anchor="end" font-size="12" fill="#5a6670">Pressure 1023-1024 hPa</text><rect x="53.3" y="192.7" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="145.3" cy="224.7" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b77812" stroke-width="2" /><line x1="145.3" y1="224.7" x2="118.2" y2="249.1" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="145.3" y1="224.7" x2="118.2" y2="249.1" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><path d="M118.2,249.1 L120.7,241.5 M118.2,249.1 L126.0,247.4" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M118.2,249.1 L120.7,241.5 M118.2,249.1 L126.0,247.4" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><text x="145.3" y="255.7" text-anchor="middle" font-size="11" fill="#172027">16 kt G26</text><text x="145.3" y="268.7" text-anchor="middle" font-size="10" fill="#5a6670">1024 hPa</text><rect x="268.0" y="192.7" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="360.0" cy="224.7" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b84b42" stroke-width="2" /><line x1="360.0" y1="224.7" x2="331.5" y2="245.4" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="360.0" y1="224.7" x2="331.5" y2="245.4" stroke="#b84b42" stroke-width="3" stroke-linecap="round" /><path d="M331.5,245.4 L334.8,238.0 M331.5,245.4 L339.5,244.5" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M331.5,245.4 L334.8,238.0 M331.5,245.4 L339.5,244.5" stroke="#b84b42" stroke-width="3" stroke-linecap="round" /><text x="360.0" y="255.7" text-anchor="middle" font-size="11" fill="#172027">15 kt G27</text><text x="360.0" y="268.7" text-anchor="middle" font-size="10" fill="#5a6670">1024 hPa</text><rect x="482.7" y="192.7" width="184.0" height="64.0" fill="#5a6670" opacity="0.41" stroke="#172027" stroke-width="0.8" /><circle cx="574.7" cy="224.7" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b84b42" stroke-width="2" /><line x1="574.7" y1="224.7" x2="540.7" y2="247.6" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="574.7" y1="224.7" x2="540.7" y2="247.6" stroke="#b84b42" stroke-width="3" stroke-linecap="round" /><path d="M540.7,247.6 L544.2,240.4 M540.7,247.6 L548.7,247.0" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M540.7,247.6 L544.2,240.4 M540.7,247.6 L548.7,247.0" stroke="#b84b42" stroke-width="3" stroke-linecap="round" /><text x="574.7" y="255.7" text-anchor="middle" font-size="11" fill="#172027">21 kt G28</text><text x="574.7" y="268.7" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><rect x="53.3" y="118.0" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="145.3" cy="150.0" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b77812" stroke-width="2" /><line x1="145.3" y1="150.0" x2="118.4" y2="172.6" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="145.3" y1="150.0" x2="118.4" y2="172.6" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><path d="M118.4,172.6 L121.1,165.1 M118.4,172.6 L126.2,171.2" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M118.4,172.6 L121.1,165.1 M118.4,172.6 L126.2,171.2" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><text x="145.3" y="181.0" text-anchor="middle" font-size="11" fill="#172027">15 kt G25</text><text x="145.3" y="194.0" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><rect x="268.0" y="118.0" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="360.0" cy="150.0" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b84b42" stroke-width="2" /><line x1="360.0" y1="150.0" x2="332.1" y2="171.8" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="360.0" y1="150.0" x2="332.1" y2="171.8" stroke="#b84b42" stroke-width="3" stroke-linecap="round" /><path d="M332.1,171.8 L335.1,164.4 M332.1,171.8 L340.0,170.7" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M332.1,171.8 L335.1,164.4 M332.1,171.8 L340.0,170.7" stroke="#b84b42" stroke-width="3" stroke-linecap="round" /><text x="360.0" y="181.0" text-anchor="middle" font-size="11" fill="#172027">15 kt G27</text><text x="360.0" y="194.0" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><rect x="482.7" y="118.0" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="574.7" cy="150.0" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b77812" stroke-width="2" /><line x1="574.7" y1="150.0" x2="541.1" y2="171.0" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="574.7" y1="150.0" x2="541.1" y2="171.0" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><path d="M541.1,171.0 L544.8,163.9 M541.1,171.0 L549.1,170.7" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M541.1,171.0 L544.8,163.9 M541.1,171.0 L549.1,170.7" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><text x="574.7" y="181.0" text-anchor="middle" font-size="11" fill="#172027">20 kt G26</text><text x="574.7" y="194.0" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><rect x="53.3" y="43.3" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="145.3" cy="75.3" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#b77812" stroke-width="2" /><line x1="145.3" y1="75.3" x2="118.5" y2="96.3" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="145.3" y1="75.3" x2="118.5" y2="96.3" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><path d="M118.5,96.3 L121.5,88.8 M118.5,96.3 L126.5,95.2" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M118.5,96.3 L121.5,88.8 M118.5,96.3 L126.5,95.2" stroke="#b77812" stroke-width="3" stroke-linecap="round" /><text x="145.3" y="106.3" text-anchor="middle" font-size="11" fill="#172027">14 kt G25</text><text x="145.3" y="119.3" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><rect x="268.0" y="43.3" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="360.0" cy="75.3" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#1d7b72" stroke-width="2" /><line x1="360.0" y1="75.3" x2="331.3" y2="93.2" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="360.0" y1="75.3" x2="331.3" y2="93.2" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" /><path d="M331.3,93.2 L335.1,86.2 M331.3,93.2 L339.3,93.0" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M331.3,93.2 L335.1,86.2 M331.3,93.2 L339.3,93.0" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" /><text x="360.0" y="106.3" text-anchor="middle" font-size="11" fill="#172027">14 kt G24</text><text x="360.0" y="119.3" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><rect x="482.7" y="43.3" width="184.0" height="64.0" fill="#5a6670" opacity="0.42" stroke="#172027" stroke-width="0.8" /><circle cx="574.7" cy="75.3" r="24" fill="#ffffff" fill-opacity="0.72" stroke="#1d7b72" stroke-width="2" /><line x1="574.7" y1="75.3" x2="544.6" y2="90.0" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><line x1="574.7" y1="75.3" x2="544.6" y2="90.0" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" /><path d="M544.6,90.0 L549.1,83.3 M544.6,90.0 L552.6,90.5" stroke="#172027" stroke-width="5" stroke-linecap="round" opacity="0.9" /><path d="M544.6,90.0 L549.1,83.3 M544.6,90.0 L552.6,90.5" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" /><text x="574.7" y="106.3" text-anchor="middle" font-size="11" fill="#172027">13 kt G23</text><text x="574.7" y="119.3" text-anchor="middle" font-size="10" fill="#5a6670">1023 hPa</text><circle cx="360.0" cy="150.0" r="12" fill="none" stroke="#172027" stroke-width="3" /><text x="360.0" y="136.0" text-anchor="middle" font-size="11" fill="#172027">Race area</text><text x="38" y="288" font-size="11" fill="#5a6670">TWS range 13-21 kt. Darker cells indicate more cloud cover.</text><text x="682" y="288" text-anchor="end" font-size="11" fill="#5a6670">Gust color: green lower, amber middle, red higher.</text></svg>
+    </section>
+
+    <section class="charts">
+      <div class="chart">
+        <h2>Wind Speed, Gusts And Lulls</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="speed chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">36</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">26</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">16</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">6</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-4</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,112.0 101.2,107.0 158.5,112.0 215.8,112.0 273.0,122.0 330.2,127.0 387.5,137.0 444.8,132.0 502.0,132.0" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,52.1 101.2,37.2 158.5,52.1 215.8,47.1 273.0,62.1 330.2,77.1 387.5,92.1 444.8,87.1 502.0,87.1" fill="none" stroke="#b84b42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,151.9 101.2,146.9 158.5,151.9 215.8,151.9 273.0,161.9 330.2,166.9 387.5,171.9 444.8,166.9 502.0,156.9" fill="none" stroke="#b77812" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--blue)"></span>TWS</span>
+          <span><span class="swatch" style="background: var(--red)"></span>Gust</span>
+          <span><span class="swatch" style="background: var(--gold)"></span>Lull</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h2>Direction And 925 hPa Gradient</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="direction chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">297</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">279</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">260</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">241</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">223</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,170.2 101.2,170.2 158.5,170.2 215.8,170.2 273.0,196.8 330.2,196.8 387.5,170.2 444.8,170.2 502.0,170.2" fill="none" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,37.2 101.2,61.1 158.5,61.1 215.8,53.1 273.0,53.1 330.2,61.1 387.5,66.4 444.8,53.1 502.0,37.2" fill="none" stroke="#b77812" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--teal)"></span>TWD</span>
+          <span><span class="swatch" style="background: var(--gold)"></span>925 hPa</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h2>Cloud And Boundary Layer</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="cloud chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">112</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">81</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">50</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">19</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-12</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,40.4 101.2,37.2 158.5,37.2 215.8,62.7 273.0,51.5 330.2,51.5 387.5,56.3 444.8,110.6 502.0,196.8" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,93.0 101.2,108.7 158.5,108.7 215.8,94.6 273.0,63.9 330.2,49.7 387.5,41.1 444.8,51.3 502.0,37.2" fill="none" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--blue)"></span>Cloud %</span>
+          <span><span class="swatch" style="background: var(--teal)"></span>Boundary layer</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h2>Sea State</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="marine chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">2</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">1</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">1</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">0</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-0</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,37.2 101.2,37.2 158.5,39.3 215.8,39.3 273.0,45.6 330.2,49.8 387.5,56.1 444.8,58.2 502.0,62.4" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--blue)"></span>Wave height</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="panel">
+        <h2>Meteorology</h2>
+        <ul><li>Surface flow averages 240 at 15 kt through the race window.</li><li>925 hPa gradient averages 280 at 32 kt; surface-gradient separation is about 46 degrees.</li><li>Cloud cover averages 78%, so cloud impact is material.</li><li>Boundary layer height averages about 793 m; mixing potential is good.</li><li>CAPE is low, so gusts should mostly come from mixing, terrain and pressure patches rather than deep convection.</li></ul>
+      </div>
+      <div class="panel">
+        <h2>Venue Effects</h2>
+        <ul><li>Custom venue selected from the map. Local geography has not been classified yet.</li><li>Use observations and visual checks to refine shoreline, urban, woodland and terrain effects for this venue.</li><li>Race area: Race area, centered near 50.580, -2.450, radius about 2 nm.</li><li>Race area generated from the map-selected venue point.</li><li>Move or tune this once course geometry is known.</li><li>No venue-specific shoreline or topographic rules are configured yet; treat local-effect notes as provisional.</li></ul>
+      </div>
+    </section>
+
+    
+
+    <footer>
+      Generated for planning and race briefing. Forecast date resolved from local venue time. Sea state: mean wave height around 1.4 m from 240, period about 5 s.
+    </footer>
+  </main>
+</body>
+</html>

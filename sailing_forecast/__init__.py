@@ -1,0 +1,2 @@
+"""Sailing weather forecast generation."""
+

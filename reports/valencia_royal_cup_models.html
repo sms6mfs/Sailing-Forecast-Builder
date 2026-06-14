@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Valencia, Spain Sailing Forecast</title>
+  <style>
+    :root {
+      --ink: #172027;
+      --muted: #5a6670;
+      --line: #d8e0e5;
+      --panel: #f6f8f9;
+      --blue: #1e6a8d;
+      --teal: #1d7b72;
+      --gold: #b77812;
+      --red: #b84b42;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #eef3f5;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.35;
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px;
+      background: white;
+      min-height: 100vh;
+    }
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      border-bottom: 3px solid var(--ink);
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 30px; margin-bottom: 6px; letter-spacing: 0; }
+    h2 { font-size: 17px; margin-bottom: 10px; }
+    h3 { font-size: 14px; margin-bottom: 7px; color: var(--muted); text-transform: uppercase; }
+    .meta {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+    .brief {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .band, .panel {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 14px;
+      background: var(--panel);
+    }
+    .band {
+      border-left: 6px solid var(--blue);
+      background: #ffffff;
+    }
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .fact {
+      border-left: 4px solid var(--teal);
+      padding-left: 10px;
+    }
+    .fact b {
+      display: block;
+      font-size: 20px;
+    }
+    .fact span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    th {
+      text-align: left;
+      background: var(--ink);
+      color: white;
+      padding: 7px 8px;
+      font-weight: 700;
+    }
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+    }
+    td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    ul {
+      padding-left: 18px;
+      margin: 0;
+    }
+    li { margin-bottom: 7px; }
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .chart svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .swatch {
+      display: inline-block;
+      width: 18px;
+      height: 3px;
+      margin-right: 5px;
+      vertical-align: middle;
+      background: var(--blue);
+    }
+    footer {
+      color: var(--muted);
+      font-size: 11px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    @media print {
+      body { background: white; }
+      .page { max-width: none; padding: 12mm; }
+    }
+    @media (max-width: 800px) {
+      .page { padding: 18px; }
+      header, .brief, .grid-2, .charts { grid-template-columns: 1fr; }
+      .meta { text-align: left; }
+      .facts { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>Valencia Royal Cup</h1>
+        <p>Valencia, Spain - Thermal-bend day over a separate gradient</p>
+      </div>
+      <div class="meta">
+        <div>Team: n/a</div>
+        <div>Forecaster: Sailing Forecast Builder</div>
+        <div>Issue: 0800 CEST</div>
+        <div>Date: 2026-06-12</div>
+        <div>Race window: 1000-1800 local</div>
+        <div>Race area: Royal Marina</div>
+        <div>Primary model: best_match</div>
+        <div>Confidence: high (8/10)</div>
+        <div>Source: Open-Meteo forecast and marine APIs</div>
+      </div>
+    </header>
+
+    <section class="brief">
+      <div class="band">
+        <h2>Executive Brief</h2>
+        <p>Thermal-bend day over a separate gradient. Breeze starts around 160 at 1 kt and finishes around 130 at 9 kt; speed trend is building, direction trend is backing left by 30 degrees. Expected gust-lull delta is about 7 kt, with the largest tactical value in pressure differences when the breeze is under 8 kt or cloud increases.</p>
+      </div>
+      <div class="panel">
+        <h2>Key Numbers</h2>
+        
+        <div class="facts">
+          <div class="fact"><b>1-10 kt</b><span>Mean wind range</span></div>
+          <div class="fact"><b>19 kt</b><span>Peak forecast gust</span></div>
+          <div class="fact"><b>30 deg</b><span>Net direction change</span></div>
+        </div>
+    
+      </div>
+    </section>
+
+    <section>
+      <h2>Hourly Sailing Wind</h2>
+      <table><thead><tr><th>Time</th><th>TWD</th><th>TWD range</th><th>TWS</th><th>TWS range</th><th>Gust</th><th>Lull</th><th>Phase</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1000</td><td class="num">160</td><td class="num">150-170</td><td class="num">1</td><td class="num">0-3</td><td class="num">4</td><td class="num">0</td><td>patchy</td><td>surface breeze is bent away from gradient; look for pressure patches</td></tr><tr><td class="num">1100</td><td class="num">140</td><td class="num">125-155</td><td class="num">3</td><td class="num">1-6</td><td class="num">8</td><td class="num">0</td><td>patchy</td><td>surface breeze is bent away from gradient; look for pressure patches</td></tr><tr><td class="num">1200</td><td class="num">130</td><td class="num">115-145</td><td class="num">5</td><td class="num">2-9</td><td class="num">11</td><td class="num">1</td><td>patchy</td><td>noticeable gust-lull spread; look for pressure patches</td></tr><tr><td class="num">1300</td><td class="num">120</td><td class="num">100-140</td><td class="num">6</td><td class="num">2-11</td><td class="num">14</td><td class="num">2</td><td>gust-led</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr><tr><td class="num">1400</td><td class="num">120</td><td class="num">100-140</td><td class="num">8</td><td class="num">3-12</td><td class="num">16</td><td class="num">3</td><td>gust-led</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr><tr><td class="num">1500</td><td class="num">120</td><td class="num">100-140</td><td class="num">9</td><td class="num">4-14</td><td class="num">18</td><td class="num">4</td><td>shifty</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr><tr><td class="num">1600</td><td class="num">120</td><td class="num">100-140</td><td class="num">9</td><td class="num">4-15</td><td class="num">19</td><td class="num">4</td><td>shifty</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr><tr><td class="num">1700</td><td class="num">130</td><td class="num">110-150</td><td class="num">10</td><td class="num">4-15</td><td class="num">19</td><td class="num">4</td><td>shifty</td><td>noticeable gust-lull spread</td></tr><tr><td class="num">1800</td><td class="num">130</td><td class="num">110-150</td><td class="num">9</td><td class="num">4-14</td><td class="num">19</td><td class="num">4</td><td>shifty</td><td>surface breeze is bent away from gradient; noticeable gust-lull spread</td></tr></tbody></table>
+    </section>
+
+    <section class="charts">
+      <div class="chart">
+        <h2>Wind Speed, Gusts And Lulls</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="speed chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">21</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">15</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">10</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">4</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-2</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,188.4 101.2,171.6 158.5,154.8 215.8,146.4 273.0,129.6 330.2,121.2 387.5,121.2 444.8,112.8 502.0,121.2" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,163.2 101.2,129.6 158.5,104.4 215.8,79.2 273.0,62.4 330.2,45.6 387.5,37.2 444.8,37.2 502.0,37.2" fill="none" stroke="#b84b42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,196.8 101.2,196.8 158.5,188.4 215.8,180.0 273.0,171.6 330.2,163.2 387.5,163.2 444.8,163.2 502.0,163.2" fill="none" stroke="#b77812" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--blue)"></span>TWS</span>
+          <span><span class="swatch" style="background: var(--red)"></span>Gust</span>
+          <span><span class="swatch" style="background: var(--gold)"></span>Lull</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h2>Direction And 925 hPa Gradient</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="direction chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">208</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">169</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">130</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">92</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">53</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,79.3 101.2,104.9 158.5,117.6 215.8,130.4 273.0,130.4 330.2,130.4 387.5,130.4 444.8,117.6 502.0,117.6" fill="none" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,190.5 101.2,157.2 158.5,108.7 215.8,58.9 273.0,39.7 330.2,37.2 387.5,46.1 444.8,134.2 502.0,196.8" fill="none" stroke="#b77812" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--teal)"></span>TWD</span>
+          <span><span class="swatch" style="background: var(--gold)"></span>925 hPa</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h2>Cloud And Boundary Layer</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="cloud chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">112</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">81</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">50</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">19</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-12</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,166.5 101.2,171.3 158.5,176.1 215.8,196.8 273.0,196.8 330.2,196.8 387.5,196.8 444.8,196.8 502.0,196.8" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline points="44.0,68.0 101.2,38.3 158.5,37.2 215.8,52.0 273.0,65.7 330.2,68.0 387.5,72.5 444.8,86.2 502.0,96.5" fill="none" stroke="#1d7b72" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--blue)"></span>Cloud %</span>
+          <span><span class="swatch" style="background: var(--teal)"></span>Boundary layer</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h2>Sea State</h2>
+        <svg viewBox="0 0 520 250" role="img" aria-label="marine chart"><line x1="44" y1="18.0" x2="502" y2="18.0" stroke="#e7ecef" /><text x="8" y="22.0" font-size="11" fill="#5a6670">0</text><line x1="44" y1="67.5" x2="502" y2="67.5" stroke="#e7ecef" /><text x="8" y="71.5" font-size="11" fill="#5a6670">0</text><line x1="44" y1="117.0" x2="502" y2="117.0" stroke="#e7ecef" /><text x="8" y="121.0" font-size="11" fill="#5a6670">0</text><line x1="44" y1="166.5" x2="502" y2="166.5" stroke="#e7ecef" /><text x="8" y="170.5" font-size="11" fill="#5a6670">0</text><line x1="44" y1="216.0" x2="502" y2="216.0" stroke="#e7ecef" /><text x="8" y="220.0" font-size="11" fill="#5a6670">-0</text><line x1="44" y1="18" x2="44" y2="216" stroke="#9aa6ad" /><line x1="44" y1="216" x2="502" y2="216" stroke="#9aa6ad" /><polyline points="44.0,44.8 101.2,44.8 158.5,44.8 215.8,52.4 273.0,52.4 330.2,44.8 387.5,44.8 444.8,37.2 502.0,37.2" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><text x="44.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">10</text><text x="101.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">11</text><text x="158.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">12</text><text x="215.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">13</text><text x="273.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">14</text><text x="330.2" y="240" text-anchor="middle" font-size="10" fill="#5a6670">15</text><text x="387.5" y="240" text-anchor="middle" font-size="10" fill="#5a6670">16</text><text x="444.8" y="240" text-anchor="middle" font-size="10" fill="#5a6670">17</text><text x="502.0" y="240" text-anchor="middle" font-size="10" fill="#5a6670">18</text></svg>
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--blue)"></span>Wave height</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="panel">
+        <h2>Meteorology</h2>
+        <ul><li>Surface flow averages 130 at 7 kt through the race window.</li><li>925 hPa gradient averages 140 at 4 kt; surface-gradient separation is about 9 degrees.</li><li>Cloud cover averages 5%, so cloud impact is limited.</li><li>Boundary layer height averages about 578 m; mixing potential is shallow to moderate.</li><li>CAPE is low, so gusts should mostly come from mixing, terrain and pressure patches rather than deep convection.</li></ul>
+      </div>
+      <div class="panel">
+        <h2>Venue Effects</h2>
+        <ul><li>Town and port heating can pull a light coastal flow onshore through the afternoon.</li><li>In weak gradients, the first breeze can be patchy with short-lived pressure lanes.</li><li>The port, beach and city edge can create bends and local acceleration close to shore.</li><li>Race area: Royal Marina, centered near 39.454, -0.313, radius about 2 nm.</li><li>Close to port and city heating, so local bends can be larger than the model grid suggests.</li><li>Early onshore flow can be narrow, patchy and sensitive to town heating.</li><li>Flow is more cross-shore, so land-water heating contrast is likely more important than shoreline channeling.</li><li>E-SE sea breeze: Town and port heating can strengthen the onshore component during the afternoon. Pressure lanes may arrive before the direction fully settles.</li></ul>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 18px;"><h2>Model Comparison</h2><ul><li>best_match: averages 130 at 7 kt.</li><li>gfs_seamless: averages 110 at 10 kt.</li><li>ecmwf_ifs025: averages 140 at 6 kt.</li><li>Model spread: direction spread about 18 degrees; speed spread about 3.9 kt.</li></ul></section>
+
+    <footer>
+      Generated for planning and race briefing. Forecast date resolved from local venue time. Sea state: mean wave height around 0.4 m from 110, period about 4 s.
+    </footer>
+  </main>
+</body>
+</html>
