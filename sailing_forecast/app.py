@@ -160,7 +160,7 @@ def build_forecast_for_venue(
 
 
 def normalize_primary_model(model: str | None) -> str:
-    if not model or model == "best_match":
+    if not model:
         return AUTO_PRIMARY_MODEL
     return model
 
