@@ -24,6 +24,8 @@ const MARINE_HOURLY = [
 
 const AUTO_PRIMARY_MODEL = "auto_highest_resolution";
 const AREA_MAP_HOURS = [11, 13, 15, 17];
+const PROFILE_MODEL = "ecmwf_ifs025";
+const PROFILE_PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300];
 
 const HIGHEST_RESOLUTION_MODEL_ORDER = [
   "meteoswiss_icon_ch1",
@@ -354,11 +356,15 @@ async function buildForecastResult(payload) {
   const comparisonRuns = await fetchModelRuns(payload.venue, payload.date, comparisonModels, payload.start_hour, payload.end_hour, payload.forecast_days);
   const modelRuns = [{ name: resolvedModel, hours: raceHours }, ...comparisonRuns.runs];
   statusEl.textContent = "Fetching race-area wind maps...";
-  const areaMaps = await fetchAreaMaps(payload.race_area, payload.date, AREA_MAP_HOURS, resolvedModel, payload.area_grid_size);
-  const forecast = analyzeForecast(payload, resolvedModel, raceHours, modelRuns, comparisonRuns.unavailable, areaMaps);
+  const areaMaps = await fetchAreaMaps(payload.race_area, payload.date, payload.forecast_days, AREA_MAP_HOURS, resolvedModel, payload.area_grid_size);
+  statusEl.textContent = "Fetching ECMWF sounding profiles...";
+  const profiles = await fetchProfiles(payload.race_area || payload.venue, payload.date, payload.forecast_days);
+  const forecast = analyzeForecast(payload, resolvedModel, raceHours, modelRuns, comparisonRuns.unavailable, areaMaps, profiles);
   return {
     html: renderForecastHtml(forecast),
     wind_maps: areaMaps.map((areaMap) => ({
+      key: areaMap.key,
+      date: areaMap.date,
       hour: areaMap.hour,
       time_label: areaMap.time_label,
       points: areaMap.points,
@@ -476,26 +482,27 @@ async function fetchModelRuns(venue, forecastDate, models, startHour, endHour, f
   return { runs, unavailable };
 }
 
-async function fetchAreaMaps(raceArea, forecastDate, targetHours, model, gridSize) {
+async function fetchAreaMaps(raceArea, forecastDate, forecastDays, targetHours, model, gridSize) {
   const points = gridPoints(raceArea, gridSize);
   const batches = chunked(points, 180);
-  const mapsByHour = new Map(targetHours.map((hour) => [hour, []]));
+  const targets = areaMapTargets(forecastDate, forecastDays, targetHours);
+  const mapsByKey = new Map(targets.map((target) => [target.key, []]));
   for (const batch of batches) {
-    const batchMaps = await fetchAreaMapsBatch(batch, forecastDate, targetHours, model);
+    const batchMaps = await fetchAreaMapsBatch(batch, forecastDate, forecastEndDate(forecastDate, forecastDays), targets, model);
     batchMaps.forEach((areaMap) => {
-      mapsByHour.get(areaMap.hour).push(...areaMap.points);
+      mapsByKey.get(areaMap.key).push(...areaMap.points);
     });
   }
-  return targetHours.map((hour) => ({ hour, time_label: `${String(hour).padStart(2, "0")}:00 local`, points: mapsByHour.get(hour) || [] }));
+  return targets.map((target) => ({ ...target, points: mapsByKey.get(target.key) || [] }));
 }
 
-async function fetchAreaMapsBatch(points, forecastDate, targetHours, model) {
+async function fetchAreaMapsBatch(points, forecastDate, endDate, targets, model) {
   const params = {
     latitude: points.map(([latitude]) => latitude.toFixed(5)).join(","),
     longitude: points.map(([, longitude]) => longitude.toFixed(5)).join(","),
     timezone: "auto",
     start_date: forecastDate,
-    end_date: forecastDate,
+    end_date: endDate,
     wind_speed_unit: "kn",
     hourly: "wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,pressure_msl",
   };
@@ -504,7 +511,7 @@ async function fetchAreaMapsBatch(points, forecastDate, targetHours, model) {
   }
   const weather = await openMeteoJson("https://api.open-meteo.com/v1/forecast", params);
   const locations = Array.isArray(weather) ? weather : [weather];
-  return targetHours.map((targetHour) => {
+  return targets.map((target) => {
     const mapPoints = [];
     points.forEach(([latitude, longitude], pointIndex) => {
       const location = locations[pointIndex];
@@ -512,7 +519,7 @@ async function fetchAreaMapsBatch(points, forecastDate, targetHours, model) {
         return;
       }
       const hourly = location.hourly;
-      const index = closestHourIndex(hourly.time || [], targetHour);
+      const index = closestDateHourIndex(hourly.time || [], target.date, target.hour);
       mapPoints.push({
         latitude,
         longitude,
@@ -523,15 +530,74 @@ async function fetchAreaMapsBatch(points, forecastDate, targetHours, model) {
         sea_level_pressure: valueAt(hourly, "pressure_msl", index),
       });
     });
-    return { hour: targetHour, time_label: `${String(targetHour).padStart(2, "0")}:00 local`, points: mapPoints };
+    return { ...target, points: mapPoints };
   });
 }
 
-function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableModels, areaMaps) {
+async function fetchProfiles(location, forecastDate, forecastDays) {
+  const hourlyVariables = [];
+  PROFILE_PRESSURE_LEVELS.forEach((level) => {
+    hourlyVariables.push(
+      `temperature_${level}hPa`,
+      `relative_humidity_${level}hPa`,
+      `wind_speed_${level}hPa`,
+      `wind_direction_${level}hPa`,
+      `geopotential_height_${level}hPa`,
+    );
+  });
+  try {
+    const weather = await openMeteoJson("https://api.open-meteo.com/v1/forecast", {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      timezone: "auto",
+      start_date: forecastDate,
+      end_date: forecastEndDate(forecastDate, forecastDays),
+      wind_speed_unit: "kn",
+      hourly: hourlyVariables.join(","),
+      models: PROFILE_MODEL,
+    });
+    const hourly = weather.hourly || {};
+    return (hourly.time || []).map((timeText, index) => {
+      const levels = PROFILE_PRESSURE_LEVELS.map((level) => ({
+        pressure_hpa: level,
+        temperature_c: valueAt(hourly, `temperature_${level}hPa`, index),
+        relative_humidity_pct: valueAt(hourly, `relative_humidity_${level}hPa`, index),
+        wind_speed_kt: valueAt(hourly, `wind_speed_${level}hPa`, index),
+        wind_direction_deg: valueAt(hourly, `wind_direction_${level}hPa`, index),
+        geopotential_height_m: valueAt(hourly, `geopotential_height_${level}hPa`, index),
+      })).filter((level) => (
+        level.temperature_c != null ||
+        level.relative_humidity_pct != null ||
+        level.wind_speed_kt != null ||
+        level.wind_direction_deg != null
+      ));
+      return {
+        key: timeText,
+        time_label: profileTimeLabel(timeText),
+        model_name: PROFILE_MODEL,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        levels,
+      };
+    }).filter((profile) => profile.levels.length);
+  } catch (error) {
+    return [{
+      key: "profile-unavailable",
+      time_label: "Unavailable",
+      model_name: PROFILE_MODEL,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      levels: [],
+      error: error.message,
+    }];
+  }
+}
+
+function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableModels, areaMaps, profiles) {
   const sailingHours = raceHours.map((hour) => analyzeHour(hour));
   const [executiveHours, executiveModel] = executiveSourceHours(modelRuns, raceHours, modelName);
   const executiveSailingHours = executiveHours.map((hour) => analyzeHour(hour));
-  const typeOfDay = typeOfDay(raceHours);
+  const dayType = typeOfDay(raceHours);
   return {
     event: payload.event,
     team: payload.team,
@@ -542,9 +608,9 @@ function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableMo
     forecast_date: payload.date,
     race_window: `${String(payload.start_hour).padStart(2, "0")}00-${String(payload.end_hour).padStart(2, "0")}00 local`,
     model_name: modelName,
-    type_of_day: typeOfDay,
+    type_of_day: dayType,
     confidence: confidence(raceHours),
-    executive_summary: summary(typeOfDay, executiveSailingHours, executiveHours, executiveModel),
+    executive_summary: summary(dayType, executiveSailingHours, executiveHours, executiveModel),
     meteorology: meteorology(raceHours, areaMaps),
     local_effects: localEffects(payload.race_area, raceHours),
     hours: sailingHours,
@@ -554,6 +620,7 @@ function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableMo
     model_summaries: [...summarizeModelRuns(modelRuns.slice(1), unavailableModels), "Static GitHub Pages build: Open-Meteo is fetched directly from the browser."],
     marine_summary: marineSummary(raceHours),
     model_runs: modelRuns,
+    profiles,
   };
 }
 
@@ -881,14 +948,22 @@ function renderForecastHtml(forecast) {
     ${renderSynopticChartSection(forecast)}
     <section><h2>925 hPa Wind</h2>${render925Table(forecast)}</section>
     <section><h2>Hourly Sailing Wind</h2>${renderHourTable(forecast)}</section>
-    <section class="panel"><h2>Forecast Area Wind Maps</h2>${renderForecastAreaMaps(forecast)}</section>
+    <section class="panel forecast-map-section"><h2>Forecast Area Wind Maps</h2><p class="map-caption">Forecast area wind maps show Open-Meteo 10 m wind direction and speed at sampled grid points.</p>${renderForecastAreaMaps(forecast)}</section>
     <section class="grid-2">
       <div class="panel"><h2>Meteorology</h2>${renderList(forecast.meteorology)}</div>
       <div class="panel"><h2>Venue Effects</h2>${renderList(forecast.local_effects)}</div>
     </section>
     ${forecast.model_summaries.length ? `<section class="panel"><h2>Model Comparison</h2>${renderList(forecast.model_summaries)}</section>` : ""}
+    ${renderProfileSection(forecast)}
     <footer>Generated for planning and race briefing. ${escapeHtml(forecast.marine_summary || "")}</footer>
   </main>
+  <script>
+    function selectSoundingProfile(value) {
+      document.querySelectorAll("[data-profile-chart]").forEach(function (chart) {
+        chart.hidden = chart.getAttribute("data-profile-chart") !== value;
+      });
+    }
+  </script>
 </body>
 </html>`;
 }
@@ -915,8 +990,51 @@ function reportCss() {
     .wind-overlay { position:absolute; inset:0; z-index:5; width:100%; height:100%; background:transparent; pointer-events:none; }
     .map-caption, footer { color:var(--muted); font-size:12px; }
     .synoptic-image { width:100%; max-height:520px; object-fit:contain; border:1px solid var(--line); background:white; }
+    .profile-control { display:inline-flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--muted); font-size:13px; }
+    .profile-control select { min-width:190px; padding:5px 7px; border:1px solid var(--line); border-radius:4px; background:white; color:var(--ink); }
+    .legend { display:flex; flex-wrap:wrap; gap:14px; color:var(--muted); font-size:12px; margin-top:6px; }
+    .swatch { display:inline-block; width:18px; height:3px; margin-right:5px; vertical-align:middle; }
     .speed-cell { font-weight:700; }
-    @media print { @page { size:A4; margin:8mm; } body{background:white;font-size:10px}.page{padding:0;max-width:none} table{font-size:8px}.panel,.band{padding:7px} }
+    @media print {
+      @page { size:A4; margin:6mm; }
+      html, body { width:210mm; background:white; }
+      body { font-size:8.5px; line-height:1.08; }
+      .page { max-width:none; padding:0; min-height:auto; zoom:0.94; }
+      header { gap:1pt; padding-bottom:1pt; margin-bottom:1pt; border-bottom-width:1px; break-inside:avoid; page-break-inside:avoid; }
+      h1 { font-size:16px; margin-bottom:1pt; }
+      h2 { font-size:10px; margin-bottom:1pt; }
+      h3 { font-size:8.5px; margin-bottom:1pt; }
+      p { margin-bottom:1pt; }
+      .meta { font-size:7px; gap:1pt; }
+      .brief,.grid-2 { gap:3pt; margin-bottom:3pt; break-inside:avoid; page-break-inside:avoid; }
+      .wind-map-grid { gap:3pt; margin-bottom:3pt; break-inside:auto; page-break-inside:auto; }
+      .band,.panel { padding:4pt; margin-bottom:3pt; border-radius:3px; break-inside:avoid; page-break-inside:avoid; }
+      .band { border-left-width:3px; }
+      .facts { gap:3pt; }
+      .fact { border-left-width:2px; padding-left:3pt; }
+      .fact b { font-size:11px; }
+      .fact span { font-size:6.5px; }
+      section, .wind-map, .profile-section, .chart { break-inside:avoid; page-break-inside:avoid; }
+      .forecast-map-section { break-inside:auto; page-break-inside:auto; }
+      .forecast-map-section .wind-map-grid { break-inside:auto; page-break-inside:auto; }
+      .forecast-map-section .wind-map { break-inside:avoid; page-break-inside:avoid; }
+      table { font-size:6.8px; margin-bottom:3pt; break-inside:avoid; page-break-inside:avoid; }
+      thead { display:table-header-group; }
+      tr, th, td { break-inside:avoid; page-break-inside:avoid; }
+      th, td { padding:1.5pt 2pt; }
+      ul { padding-left:9pt; }
+      li { margin-bottom:1pt; }
+      img, svg, .tile-map, .synoptic-image { break-inside:avoid; page-break-inside:avoid; }
+      .tile-map { max-width:64mm; border-width:1px; }
+      .wind-overlay { max-height:64mm; }
+      .synoptic-image { max-height:78mm; }
+      .profile-section svg { max-height:72mm; }
+      .profile-control { margin-bottom:2pt; font-size:7px; }
+      .profile-control select { padding:1pt 2pt; min-width:38mm; }
+      .legend { gap:4pt; font-size:6.8px; margin-top:1pt; }
+      .map-caption, footer { font-size:6.8px; margin-top:1pt; }
+      footer { padding-top:2pt; break-inside:avoid; page-break-inside:avoid; }
+    }
     @media screen and (max-width:800px) { .page{padding:18px} header,.brief,.grid-2,.wind-map-grid{grid-template-columns:1fr}.meta{text-align:left}.facts{grid-template-columns:1fr} }
   `;
 }
@@ -938,7 +1056,15 @@ function renderSynopticChartSection(forecast) {
     return "";
   }
   const url = escapeHtml(forecast.synoptic_chart_url);
+  if (isImageUrl(forecast.synoptic_chart_url)) {
+    return `<section class="panel"><h2>Synoptic Chart</h2><img class="synoptic-image" src="${url}" alt="Synoptic surface pressure chart" referrerpolicy="no-referrer"><p class="map-caption"><a href="${url}" target="_blank" rel="noreferrer">Open synoptic chart source</a></p></section>`;
+  }
   return `<section class="panel"><h2>Synoptic Chart</h2><p class="map-caption"><a href="${url}" target="_blank" rel="noreferrer">Open synoptic chart source</a></p></section>`;
+}
+
+function isImageUrl(value) {
+  const url = String(value || "").trim();
+  return /^data:image\//i.test(url) || /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?(#.*)?$/i.test(url);
 }
 
 function render925Table(forecast) {
@@ -974,7 +1100,118 @@ function renderForecastAreaMaps(forecast) {
   if (!forecast.area_maps.length) {
     return "<p>No area grid data available for this report.</p>";
   }
-  return `<div class="wind-map-grid">${forecast.area_maps.map((areaMap) => `<div class="wind-map"><h3>${escapeHtml(areaMap.time_label)} Wind Map</h3>${renderWeatherAreaMap(forecast, areaMap)}</div>`).join("")}</div>`;
+  return `<div class="wind-map-grid">${forecast.area_maps.map((areaMap) => `<div class="wind-map"><h3>${escapeHtml(areaMap.time_label)} 10 m Wind Map</h3>${renderWeatherAreaMap(forecast, areaMap)}</div>`).join("")}</div>`;
+}
+
+function renderProfileSection(forecast) {
+  const profiles = (forecast.profiles || []).filter((profile) => profile.levels && profile.levels.length);
+  if (!profiles.length) {
+    const error = forecast.profiles && forecast.profiles[0] && forecast.profiles[0].error;
+    return `<section class="panel profile-section"><h2>ECMWF Point Sounding</h2><p class="map-caption">ECMWF pressure-level profile unavailable${error ? `: ${escapeHtml(error)}` : "."}</p></section>`;
+  }
+  const selectedKey = profiles.find((profile) => profile.key.includes("13:00"))?.key || profiles[0].key;
+  const options = profiles
+    .map((profile) => `<option value="${escapeHtml(profile.key)}" ${profile.key === selectedKey ? "selected" : ""}>${escapeHtml(profile.time_label)}</option>`)
+    .join("");
+  const charts = profiles
+    .map((profile) => `<div data-profile-chart="${escapeHtml(profile.key)}" ${profile.key === selectedKey ? "" : "hidden"}>${profileChart(profile)}${profileTconCaption(profile)}</div>`)
+    .join("");
+  return `<section class="panel profile-section">
+    <h2>ECMWF Point Sounding</h2>
+    <label class="profile-control">Time <select onchange="selectSoundingProfile(this.value)">${options}</select></label>
+    ${charts}
+    <div class="legend">
+      <span><span class="swatch" style="background:#b84b42"></span>Temperature</span>
+      <span><span class="swatch" style="background:#1e6a8d"></span>Dew point from RH</span>
+      <span><span class="swatch" style="background:#172027"></span>Wind by pressure level</span>
+    </div>
+    <p class="map-caption">ECMWF IFS 0.25 pressure-level profile near ${forecast.race_area.latitude.toFixed(4)}, ${forecast.race_area.longitude.toFixed(4)}. TCON is approximated from the lowest available pressure level, derived dew point, CCL, and a dry adiabat back to the surface pressure. CCL height is interpolated from ECMWF geopotential height; LCL height uses the approximate 125 m per C temperature-dewpoint spread method.</p>
+  </section>`;
+}
+
+function profileChart(profile) {
+  const levels = profile.levels
+    .filter((level) => level.pressure_hpa >= 300 && level.pressure_hpa <= 1000)
+    .sort((a, b) => b.pressure_hpa - a.pressure_hpa);
+  if (!levels.length) {
+    return `<svg viewBox="0 0 760 430" role="img" aria-label="No sounding data"><text x="380" y="215" text-anchor="middle" fill="#5a6670">No profile data available</text></svg>`;
+  }
+  const width = 760;
+  const height = 430;
+  const padLeft = 64;
+  const padRight = 118;
+  const padTop = 26;
+  const padBottom = 44;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+  const minPressure = 300;
+  const maxPressure = 1000;
+  const minTemp = -50;
+  const maxTemp = 35;
+  const skew = 48;
+  const yAt = (pressure) => padTop + ((pressure - minPressure) / (maxPressure - minPressure)) * plotH;
+  const xAt = (temperature, pressure) => {
+    const base = padLeft + ((temperature - minTemp) / (maxTemp - minTemp)) * plotW;
+    const skewOffset = ((maxPressure - pressure) / (maxPressure - minPressure)) * skew;
+    return base + skewOffset;
+  };
+  const elements = [
+    `<rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="#ffffff" stroke="#d8e0e5"></rect>`,
+    `<text x="${padLeft}" y="17" font-size="12" fill="#5a6670">${escapeHtml(profile.time_label)} | ${escapeHtml(profile.model_name)}</text>`,
+  ];
+  const tcon = convectiveTemperature(profile);
+  if (tcon) {
+    const cclHeight = tcon.ccl_height_m == null ? "n/a" : `${Math.round(tcon.ccl_height_m)} m`;
+    const lclHeight = tcon.lcl_height_m == null ? "n/a" : `${Math.round(tcon.lcl_height_m)} m`;
+    elements.push(`<text x="${width - 18}" y="17" text-anchor="end" font-size="12" fill="#b84b42">TCON ${tcon.temperature_c.toFixed(1)} C | CCL ${cclHeight} | LCL ${lclHeight}</text>`);
+  }
+  [1000, 925, 850, 700, 500, 300].forEach((pressure) => {
+    const y = yAt(pressure);
+    elements.push(`<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${width - padRight}" y2="${y.toFixed(1)}" stroke="#e7ecef"></line>`);
+    elements.push(`<text x="14" y="${(y + 4).toFixed(1)}" font-size="11" fill="#5a6670">${pressure}</text>`);
+  });
+  [-40, -20, 0, 20].forEach((temperature) => {
+    const xBottom = xAt(temperature, maxPressure);
+    const xTop = xAt(temperature, minPressure);
+    elements.push(`<line x1="${xBottom.toFixed(1)}" y1="${padTop + plotH}" x2="${xTop.toFixed(1)}" y2="${padTop}" stroke="#eef2f4"></line>`);
+    elements.push(`<text x="${xBottom.toFixed(1)}" y="${height - 14}" text-anchor="middle" font-size="10" fill="#5a6670">${temperature}</text>`);
+  });
+  const tempPoints = levels
+    .filter((level) => level.temperature_c != null)
+    .map((level) => `${xAt(level.temperature_c, level.pressure_hpa).toFixed(1)},${yAt(level.pressure_hpa).toFixed(1)}`);
+  const dewPoints = levels
+    .filter((level) => level.temperature_c != null && level.relative_humidity_pct != null)
+    .map((level) => `${xAt(dewPointC(level.temperature_c, level.relative_humidity_pct), level.pressure_hpa).toFixed(1)},${yAt(level.pressure_hpa).toFixed(1)}`);
+  if (tempPoints.length) {
+    elements.push(`<polyline points="${tempPoints.join(" ")}" fill="none" stroke="#b84b42" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`);
+  }
+  if (dewPoints.length) {
+    elements.push(`<polyline points="${dewPoints.join(" ")}" fill="none" stroke="#1e6a8d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>`);
+  }
+  levels.forEach((level) => {
+    if (level.wind_speed_kt == null || level.wind_direction_deg == null) {
+      return;
+    }
+    const y = yAt(level.pressure_hpa);
+    elements.push(renderWindBarbSvgPath(
+      width - 70,
+      y,
+      { wind_speed_10m: level.wind_speed_kt, wind_direction_10m: level.wind_direction_deg },
+      "#172027",
+      { backgroundWidth: 2, foregroundWidth: 1.1 },
+    ));
+  });
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="ECMWF point sounding">${elements.join("")}</svg>`;
+}
+
+function profileTconCaption(profile) {
+  const tcon = convectiveTemperature(profile);
+  if (!tcon) {
+    return '<p class="map-caption">TCON unavailable: profile needs lowest-level temperature/RH and a CCL crossing.</p>';
+  }
+  const cclHeight = tcon.ccl_height_m == null ? "n/a" : `${Math.round(tcon.ccl_height_m)} m`;
+  const lclHeight = tcon.lcl_height_m == null ? "n/a" : `${Math.round(tcon.lcl_height_m)} m`;
+  return `<p class="map-caption">Approx TCON ${tcon.temperature_c.toFixed(1)} C from ${tcon.surface_pressure_hpa} hPa parcel; CCL near ${Math.round(tcon.ccl_pressure_hpa)} hPa / ${cclHeight}; LCL near ${lclHeight}.</p>`;
 }
 
 function renderWeatherAreaMap(forecast, areaMap) {
@@ -1027,7 +1264,9 @@ function renderWeatherAreaMap(forecast, areaMap) {
   return `<div class="tile-map">${images.join("")}<svg class="wind-overlay" viewBox="0 0 ${width} ${height}" role="img" aria-label="Forecast area weather map">${elements.join("")}</svg></div>`;
 }
 
-function renderWindBarbSvgPath(x, y, point, color) {
+function renderWindBarbSvgPath(x, y, point, color, options = {}) {
+  const backgroundWidth = options.backgroundWidth ?? 4;
+  const foregroundWidth = options.foregroundWidth ?? 2.2;
   const staffLength = 19;
   const radians = (Number(point.wind_direction_10m) || 0) * Math.PI / 180;
   const ux = Math.sin(radians);
@@ -1058,7 +1297,7 @@ function renderWindBarbSvgPath(x, y, point, color) {
     marks.push(`M${sx.toFixed(1)},${sy.toFixed(1)} L${ex.toFixed(1)},${ey.toFixed(1)}`);
   }
   const path = `M${x.toFixed(1)},${y.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} ${marks.join(" ")}`;
-  return `<path d="${path}" stroke="#172027" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88"></path><path d="${path}" stroke="${color}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>`;
+  return `<path d="${path}" stroke="#172027" stroke-width="${backgroundWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88"></path><path d="${path}" stroke="${color}" stroke-width="${foregroundWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>`;
 }
 
 function renderList(items) {
@@ -1082,9 +1321,9 @@ function renderWindMapTimeOptions() {
     return;
   }
   windMapTime.disabled = false;
-  windMapTime.innerHTML = state.windMaps.map((windMap) => `<option value="${windMap.hour}">${escapeHtml(windMap.time_label)}</option>`).join("");
+  windMapTime.innerHTML = state.windMaps.map((windMap) => `<option value="${escapeHtml(windMap.key || String(windMap.hour))}">${escapeHtml(windMap.time_label)}</option>`).join("");
   const preferred = state.windMaps.find((windMap) => Number(windMap.hour) === 13) || state.windMaps[0];
-  windMapTime.value = String(preferred.hour);
+  windMapTime.value = preferred.key || String(preferred.hour);
 }
 
 function renderWindMapOverlay() {
@@ -1095,8 +1334,8 @@ function renderWindMapOverlay() {
   if (!state.windMaps.length || windMapTime.disabled) {
     return;
   }
-  const selectedHour = Number(windMapTime.value);
-  const windMap = state.windMaps.find((item) => Number(item.hour) === selectedHour) || state.windMaps[0];
+  const selectedKey = windMapTime.value;
+  const windMap = state.windMaps.find((item) => (item.key || String(item.hour)) === selectedKey) || state.windMaps[0];
   if (!windMap || !windMap.points || !windMap.points.length) {
     return;
   }
@@ -1185,7 +1424,7 @@ function nearestWindPoint(latitude, longitude, points) {
 function windPointPopup(point) {
   const pressure = point.sea_level_pressure == null ? "n/a" : `${Math.round(point.sea_level_pressure)} hPa`;
   const cloud = point.cloud_cover == null ? "n/a" : `${Math.round(point.cloud_cover)}%`;
-  return `<strong>Open-Meteo grid point</strong><br>TWD ${Math.round(point.wind_direction_10m)} | TWS ${Math.round(point.wind_speed_10m)} kt<br>Gust ${Math.round(point.wind_gust_10m)} kt | Cloud ${cloud}<br>Pressure ${pressure}`;
+  return `<strong>Open-Meteo 10 m wind grid point</strong><br>TWD ${Math.round(point.wind_direction_10m)} | TWS ${Math.round(point.wind_speed_10m)} kt<br>Gust ${Math.round(point.wind_gust_10m)} kt | Cloud ${cloud}<br>Pressure ${pressure}`;
 }
 
 function windSpeedColor(speed) {
@@ -1247,6 +1486,22 @@ function closestHourIndex(times, targetHour) {
   return bestIndex;
 }
 
+function closestDateHourIndex(times, targetDate, targetHour) {
+  let bestIndex = 0;
+  let bestDelta = Number.POSITIVE_INFINITY;
+  times.forEach((timeText, index) => {
+    const datePart = String(timeText).slice(0, 10);
+    const hour = Number(String(timeText).slice(11, 13));
+    const dayPenalty = datePart === targetDate ? 0 : 2400;
+    const delta = dayPenalty + Math.abs(hour - targetHour);
+    if (delta < bestDelta) {
+      bestIndex = index;
+      bestDelta = delta;
+    }
+  });
+  return bestIndex;
+}
+
 function valueAt(hourly, key, index) {
   const values = hourly ? hourly[key] : null;
   if (!values) return null;
@@ -1259,8 +1514,137 @@ function marineValueAt(marine, index, key) {
 }
 
 function forecastEndDate(forecastDate, forecastDays) {
-  const date = new Date(`${forecastDate}T00:00:00`);
-  date.setDate(date.getDate() + Math.max(1, Math.min(5, Number(forecastDays) || 1)) - 1);
+  const [year, month, day] = forecastDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + Math.max(1, Math.min(5, Number(forecastDays) || 1)) - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function profileTimeLabel(timeText) {
+  const date = String(timeText).slice(0, 10);
+  const hour = String(timeText).slice(11, 13);
+  return `${date} ${hour}:00 local`;
+}
+
+function dewPointC(temperatureC, relativeHumidityPct) {
+  const humidity = Math.max(1, Math.min(100, Number(relativeHumidityPct) || 1));
+  const gamma = Math.log(humidity / 100) + (17.625 * temperatureC) / (243.04 + temperatureC);
+  return (243.04 * gamma) / (17.625 - gamma);
+}
+
+function convectiveTemperature(profile) {
+  const levels = (profile.levels || [])
+    .filter((level) => level.pressure_hpa && level.temperature_c != null && level.relative_humidity_pct != null)
+    .sort((a, b) => b.pressure_hpa - a.pressure_hpa);
+  if (levels.length < 2) {
+    return null;
+  }
+  const surface = levels[0];
+  const surfaceDewPoint = dewPointC(surface.temperature_c, surface.relative_humidity_pct);
+  const surfaceMixingRatio = mixingRatioFromDewPoint(surfaceDewPoint, surface.pressure_hpa);
+  const points = levels.map((level) => {
+    const saturationTemp = saturationTemperatureForMixingRatio(surfaceMixingRatio, level.pressure_hpa);
+    return {
+      pressure_hpa: level.pressure_hpa,
+      environmental_temp_c: level.temperature_c,
+      geopotential_height_m: level.geopotential_height_m,
+      saturation_temp_c: saturationTemp,
+      difference_c: level.temperature_c - saturationTemp,
+    };
+  });
+  let ccl = null;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const lower = points[index];
+    const upper = points[index + 1];
+    if (lower.difference_c === 0) {
+      ccl = lower;
+      break;
+    }
+    if ((lower.difference_c > 0 && upper.difference_c <= 0) || (lower.difference_c < 0 && upper.difference_c >= 0)) {
+      const fraction = Math.abs(lower.difference_c) / (Math.abs(lower.difference_c) + Math.abs(upper.difference_c));
+      const pressure = lower.pressure_hpa + (upper.pressure_hpa - lower.pressure_hpa) * fraction;
+      const temperature = lower.environmental_temp_c + (upper.environmental_temp_c - lower.environmental_temp_c) * fraction;
+      const height = interpolateNullable(lower.geopotential_height_m, upper.geopotential_height_m, fraction);
+      ccl = { pressure_hpa: pressure, environmental_temp_c: temperature, geopotential_height_m: height };
+      break;
+    }
+  }
+  if (!ccl) {
+    return null;
+  }
+  const kappa = 0.2854;
+  const tconK = (ccl.environmental_temp_c + 273.15) * ((surface.pressure_hpa / ccl.pressure_hpa) ** kappa);
+  return {
+    temperature_c: tconK - 273.15,
+    ccl_pressure_hpa: ccl.pressure_hpa,
+    ccl_height_m: ccl.geopotential_height_m,
+    lcl_height_m: lclHeightM(surface.temperature_c, surfaceDewPoint, surface.geopotential_height_m),
+    surface_pressure_hpa: surface.pressure_hpa,
+    surface_dew_point_c: surfaceDewPoint,
+  };
+}
+
+function interpolateNullable(lowerValue, upperValue, fraction) {
+  if (lowerValue == null || upperValue == null) {
+    return null;
+  }
+  return lowerValue + (upperValue - lowerValue) * fraction;
+}
+
+function lclHeightM(surfaceTemperatureC, surfaceDewPointC, surfaceHeightM) {
+  if (surfaceTemperatureC == null || surfaceDewPointC == null) {
+    return null;
+  }
+  const aboveSurface = Math.max(0, 125 * (surfaceTemperatureC - surfaceDewPointC));
+  return aboveSurface + (Number(surfaceHeightM) || 0);
+}
+
+function mixingRatioFromDewPoint(dewPoint, pressureHpa) {
+  const epsilon = 0.622;
+  const vaporPressure = saturationVaporPressureHpa(dewPoint);
+  return epsilon * vaporPressure / Math.max(0.1, pressureHpa - vaporPressure);
+}
+
+function saturationVaporPressureHpa(temperatureC) {
+  return 6.112 * Math.exp((17.67 * temperatureC) / (temperatureC + 243.5));
+}
+
+function saturationTemperatureForMixingRatio(mixingRatio, pressureHpa) {
+  let low = -80;
+  let high = 50;
+  for (let index = 0; index < 40; index += 1) {
+    const mid = (low + high) / 2;
+    const saturationMixingRatio = mixingRatioFromDewPoint(mid, pressureHpa);
+    if (saturationMixingRatio > mixingRatio) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  return (low + high) / 2;
+}
+
+function areaMapTargets(forecastDate, forecastDays, targetHours) {
+  const days = Math.max(1, Math.min(5, Number(forecastDays) || 1));
+  const targets = [];
+  for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
+    const date = addCalendarDays(forecastDate, dayIndex);
+    targetHours.forEach((hour) => {
+      targets.push({
+        key: `${date}-${String(hour).padStart(2, "0")}`,
+        date,
+        hour,
+        time_label: days > 1 ? `${date} ${String(hour).padStart(2, "0")}:00 local` : `${String(hour).padStart(2, "0")}:00 local`,
+      });
+    });
+  }
+  return targets;
+}
+
+function addCalendarDays(forecastDate, dayOffset) {
+  const [year, month, day] = forecastDate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + dayOffset);
   return date.toISOString().slice(0, 10);
 }
 
