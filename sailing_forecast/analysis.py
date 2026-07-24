@@ -29,7 +29,7 @@ def analyze_forecast(
         raise ValueError("No forecast data found for the requested race window.")
 
     model_runs = model_runs or []
-    executive_hours, executive_model = executive_source_hours(model_runs, race_hours)
+    executive_hours, executive_model = executive_source_hours(model_runs, race_hours, model_name)
     include_date_label = len({hour.time.date() for hour in race_hours}) > 1
     sailing_hours = [_analyze_hour(hour, include_date_label) for hour in race_hours]
     executive_sailing_hours = [_analyze_hour(hour, include_date_label) for hour in executive_hours]
@@ -157,9 +157,14 @@ def _confidence(hours: list[ForecastHour]) -> str:
 def executive_source_hours(
     model_runs: list[ModelForecastRun],
     fallback_hours: list[ForecastHour],
+    primary_model_name: str | None = None,
 ) -> tuple[list[ForecastHour], str | None]:
     if not model_runs:
         return fallback_hours, None
+    if primary_model_name:
+        for run in model_runs:
+            if run.name == primary_model_name and run.hours:
+                return run.hours, run.name
     preferred_order = (
         "ukmo_uk_deterministic_2km",
         "meteofrance_arome_france_hd",

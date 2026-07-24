@@ -580,7 +580,7 @@ def normalize_forecast_days(value: int | str | None) -> int:
         days = int(value or DEFAULT_FORECAST_DAYS)
     except (TypeError, ValueError):
         return DEFAULT_FORECAST_DAYS
-    if days in {1, 2}:
+    if days in {1, 2, 3, 4, 5}:
         return days
     return DEFAULT_FORECAST_DAYS
 

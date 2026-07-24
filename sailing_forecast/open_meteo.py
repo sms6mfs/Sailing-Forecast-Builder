@@ -426,6 +426,6 @@ def closest_hour_index(times: list[str], target_hour: int) -> int:
 
 
 def forecast_end_date(forecast_date: str, forecast_days: int) -> str:
-    days = max(1, min(2, int(forecast_days or 1)))
+    days = max(1, min(5, int(forecast_days or 1)))
     start = datetime.fromisoformat(forecast_date).date()
     return (start + timedelta(days=days - 1)).isoformat()

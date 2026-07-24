@@ -1192,8 +1192,11 @@ def line_chart(forecast: SailingForecast, kind: str) -> str:
         grid.append(f'<line x1="{pad_left}" y1="{y:.1f}" x2="{width - pad_right}" y2="{y:.1f}" stroke="#e7ecef" />')
         grid.append(f'<text x="8" y="{y + 4:.1f}" font-size="11" fill="#5a6670">{value:.0f}</text>')
 
+    label_stride = chart_label_stride(len(labels))
     x_labels = []
     for index, label in enumerate(labels):
+        if index % label_stride != 0 and index != len(labels) - 1:
+            continue
         x = x_at(index)
         short_label = chart_time_label(label)
         x_labels.append(f'<text x="{x:.1f}" y="{height - 10}" text-anchor="middle" font-size="10" fill="#5a6670">{escape(short_label)}</text>')
@@ -1281,6 +1284,16 @@ def chart_time_label(label: str) -> str:
         date_part, time_part = label.split(" ", 1)
         return f"{date_part[-2:]} {time_part[:2]}"
     return label[:2]
+
+
+def chart_label_stride(label_count: int) -> int:
+    if label_count <= 12:
+        return 1
+    if label_count <= 24:
+        return 2
+    if label_count <= 36:
+        return 3
+    return 4
 
 
 def speed_envelope(forecast: SailingForecast, x_at, y_at) -> str:

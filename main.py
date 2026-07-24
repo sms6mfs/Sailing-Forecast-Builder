@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--forecast-days",
         type=int,
-        choices=(1, 2),
+        choices=(1, 2, 3, 4, 5),
         default=DEFAULT_FORECAST_DAYS,
         help="Number of forecast days to include in the point forecast report.",
     )

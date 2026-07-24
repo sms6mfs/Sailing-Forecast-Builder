@@ -7,6 +7,26 @@ meteorological reasoning, local effects, confidence, and sea state.
 
 ## Run
 
+Static GitHub Pages build on the `html-only-github-pages` branch:
+
+```powershell
+cd web
+python -m http.server 8008
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8008
+```
+
+This branch can be published from the `web/` folder by configuring GitHub Pages
+to deploy from the branch root folder that contains `index.html`, or by copying
+the `web/` contents to a Pages publishing root. The static build fetches
+Open-Meteo directly from the browser, so no Python server is required. Python-only
+terrain, OSM cache, local file output, PDF export, and report verification remain
+features of the full local/server build.
+
 Live Open-Meteo forecast:
 
 ```powershell
@@ -42,10 +62,10 @@ python main.py --venue-name "Solent Test" --latitude 50.8 --longitude -1.1 --dat
 python main.py --venue-name "Solent Test" --latitude 50.8 --longitude -1.1 --date 2026-06-12 --start-hour 10 --end-hour 18 --area-grid-size 21 --output-html reports/solent_dense_grid.html
 ```
 
-Two-day point forecast:
+Multi-day point forecast:
 
 ```powershell
-python main.py --venue-name "Solent Test" --latitude 50.8 --longitude -1.1 --date 2026-06-12 --start-hour 10 --end-hour 18 --forecast-days 2 --output-html reports/solent_2day.html
+python main.py --venue-name "Solent Test" --latitude 50.8 --longitude -1.1 --date 2026-06-12 --start-hour 10 --end-hour 18 --forecast-days 5 --output-html reports/solent_5day.html
 ```
 
 Verify a generated report:
@@ -85,7 +105,7 @@ python main.py --help
 - Open-Meteo weather and marine API calls.
 - Primary Open-Meteo model selection.
 - Multi-model summary when requested and available from Open-Meteo.
-- Expanded Open-Meteo model catalog including Meteo-France ARPEGE/AROME and UKMO models.
+- Expanded Open-Meteo model catalog covering the documented forecast model list.
 - Windy Point Forecast model metadata for future API-key integration.
 - Surface wind, gusts, 925 hPa gradient, cloud, boundary layer, CAPE, temperature,
   waves, SST, and current ingestion where available.
@@ -100,7 +120,7 @@ python main.py --help
 - Static HTML report verification for print CSS, core sections, tables, and plots.
 - Local web UI with a Leaflet venue map, OpenSeaMap seamarks enabled by default,
   map-click venue selection, race-area circles, primary model selection,
-  1-day or 2-day forecast selection, multi-model comparison selection,
+  1- to 5-day forecast selection, multi-model comparison selection,
   navigation-map wind overlays, report preview, and print-to-PDF workflow.
 - Observation capture to `data/observations.csv` for future model-bias tracking.
 - Open-Meteo 9x9 area-grid sampling around the selected race area.
@@ -113,7 +133,9 @@ python main.py --help
 - Configurable forecast-area sampling grids: 9x9, 15x15, or 21x21 points. Higher
   settings are slower but show more local structure from the source model grid.
 - Forecast API returns the same local wind maps as JSON objects so the web UI can
-  plot the selected time directly on the Leaflet navigation map.
+  plot the selected time directly on the Leaflet navigation map. Area wind maps
+  remain scoped to the selected start date, while tables, charts, and outlook
+  sections use the full selected forecast length.
 - 925 hPa wind table for 11:00, 13:00, 15:00 and 17:00 local time.
 - If the selected high-resolution primary model does not provide 925 hPa winds,
   the report fills those pressure-level winds from ECMWF IFS 0.25 while keeping
@@ -158,15 +180,53 @@ The next step should be improving the data quality and report polish:
 Selectable Open-Meteo model IDs currently exposed in the UI:
 
 - `auto_highest_resolution` (default; resolves to the highest-resolution available explicit model)
-- `gfs_seamless`
+- `best_match`
+- `ecmwf_ifs`
 - `ecmwf_ifs025`
-- `ecmwf_ifs04`
+- `ecmwf_aifs025_single`
+- `cma_grapes_global`
+- `bom_access_global`
+- `gfs_seamless`
+- `gfs_global`
+- `gfs_hrrr`
+- `ncep_nbm_conus`
+- `ncep_nam_conus`
+- `gfs_graphcast025`
+- `ncep_aigfs025`
+- `ncep_hgefs025_ensemble_mean`
+- `jma_seamless`
+- `jma_msm`
+- `jma_gsm`
+- `kma_seamless`
+- `kma_ldps`
+- `kma_gdps`
+- `icon_seamless`
 - `icon_global`
+- `icon_eu`
+- `icon_d2`
+- `gem_seamless`
+- `gem_global`
+- `gem_regional`
+- `gem_hrdps_continental`
+- `gem_hrdps_west`
 - `meteofrance_seamless`
 - `meteofrance_arpege_world`
 - `meteofrance_arpege_europe`
 - `meteofrance_arome_france`
 - `meteofrance_arome_france_hd`
+- `italia_meteo_arpae_icon_2i`
+- `metno_seamless`
+- `metno_nordic`
+- `knmi_seamless`
+- `knmi_harmonie_arome_europe`
+- `knmi_harmonie_arome_netherlands`
+- `dmi_seamless`
+- `dmi_harmonie_arome_europe`
 - `ukmo_seamless`
 - `ukmo_global_deterministic_10km`
 - `ukmo_uk_deterministic_2km`
+- `meteoswiss_icon_seamless`
+- `meteoswiss_icon_ch1`
+- `meteoswiss_icon_ch2`
+- `geosphere_seamless`
+- `geosphere_arome_austria`
