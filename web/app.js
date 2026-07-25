@@ -24,6 +24,7 @@ const MARINE_HOURLY = [
 
 const AUTO_PRIMARY_MODEL = "auto_highest_resolution";
 const AREA_MAP_HOURS = [11, 13, 15, 17];
+const BOUNDARY_LAYER_MODEL = "gfs_seamless";
 const PROFILE_MODEL = "ecmwf_ifs025";
 const PROFILE_PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300];
 
@@ -206,7 +207,7 @@ function renderModelControls() {
       `<label title="${escapeHtml(model.region)}"><input type="checkbox" value="${model.model_id}" ${state.defaultCompareModels.includes(model.model_id) ? "checked" : ""}>${escapeHtml(model.provider)} - ${escapeHtml(model.label)}</label>`
     ))
     .join("");
-  modelNote.textContent = `${state.models.length} Open-Meteo models available. This static build runs fully in the browser.`;
+  modelNote.textContent = `${state.models.length} Open-Meteo models available. AI forecast uses the preferred primary model, with boundary layer from GFS and sounding from ECMWF.`;
 }
 
 function groupedModels(models) {
@@ -347,8 +348,11 @@ async function generateForecast(event) {
 
 async function buildForecastResult(payload) {
   const [resolvedModel, hours] = await fetchPrimaryForecast(payload.venue, payload.date, payload.model, payload.forecast_days);
-  statusEl.textContent = `Primary model ${resolvedModel} loaded. Fetching comparison models...`;
-  const raceHours = hours.filter((hour) => payload.start_hour <= hour.time.getHours() && hour.time.getHours() <= payload.end_hour);
+  statusEl.textContent = `Primary model ${resolvedModel} loaded. Fetching GFS boundary layer...`;
+  const boundaryLayerResult = await fetchBoundaryLayerForecast(payload.venue, payload.date, payload.forecast_days);
+  const blendedHours = applyBoundaryLayerSource(hours, boundaryLayerResult.hours);
+  statusEl.textContent = "Fetching comparison models...";
+  const raceHours = blendedHours.filter((hour) => payload.start_hour <= hour.time.getHours() && hour.time.getHours() <= payload.end_hour);
   if (!raceHours.length) {
     throw new Error("No forecast data found for the requested race window.");
   }
@@ -359,7 +363,7 @@ async function buildForecastResult(payload) {
   const areaMaps = await fetchAreaMaps(payload.race_area, payload.date, payload.forecast_days, AREA_MAP_HOURS, resolvedModel, payload.area_grid_size);
   statusEl.textContent = "Fetching ECMWF sounding profiles...";
   const profiles = await fetchProfiles(payload.race_area || payload.venue, payload.date, payload.forecast_days);
-  const forecast = analyzeForecast(payload, resolvedModel, raceHours, modelRuns, comparisonRuns.unavailable, areaMaps, profiles);
+  const forecast = analyzeForecast(payload, resolvedModel, raceHours, modelRuns, comparisonRuns.unavailable, areaMaps, profiles, boundaryLayerResult);
   return {
     html: renderForecastHtml(forecast),
     wind_maps: areaMaps.map((areaMap) => ({
@@ -370,6 +374,60 @@ async function buildForecastResult(payload) {
       points: areaMap.points,
     })),
   };
+}
+
+async function fetchBoundaryLayerForecast(venue, forecastDate, forecastDays) {
+  try {
+    const weather = await openMeteoJson("https://api.open-meteo.com/v1/forecast", {
+      latitude: venue.latitude,
+      longitude: venue.longitude,
+      timezone: venue.timezone || "auto",
+      start_date: forecastDate,
+      end_date: forecastEndDate(forecastDate, forecastDays),
+      hourly: "boundary_layer_height",
+      models: BOUNDARY_LAYER_MODEL,
+    });
+    const hours = mergeBoundaryLayerHourly(weather.hourly);
+    if (!hours.some((hour) => hour.boundary_layer_height != null)) {
+      return {
+        model: BOUNDARY_LAYER_MODEL,
+        hours: [],
+        unavailable: `${BOUNDARY_LAYER_MODEL}: boundary layer unavailable (no hourly values)`,
+      };
+    }
+    return {
+      model: BOUNDARY_LAYER_MODEL,
+      hours,
+      unavailable: null,
+    };
+  } catch (error) {
+    return {
+      model: BOUNDARY_LAYER_MODEL,
+      hours: [],
+      unavailable: `${BOUNDARY_LAYER_MODEL}: boundary layer unavailable (${error.message})`,
+    };
+  }
+}
+
+function mergeBoundaryLayerHourly(weather) {
+  return (weather?.time || []).map((timeText, index) => ({
+    time_text: timeText,
+    boundary_layer_height: valueAt(weather, "boundary_layer_height", index),
+  }));
+}
+
+function applyBoundaryLayerSource(hours, boundaryLayerHours) {
+  const boundaryByTime = new Map((boundaryLayerHours || []).map((hour) => [hour.time_text, hour.boundary_layer_height]));
+  return hours.map((hour) => {
+    if (!boundaryByTime.has(hour.time_text)) {
+      return { ...hour, boundary_layer_height: null, boundary_layer_model: null };
+    }
+    return {
+      ...hour,
+      boundary_layer_height: boundaryByTime.get(hour.time_text),
+      boundary_layer_model: BOUNDARY_LAYER_MODEL,
+    };
+  });
 }
 
 async function fetchPrimaryForecast(venue, forecastDate, requestedModel, forecastDays) {
@@ -593,7 +651,7 @@ async function fetchProfiles(location, forecastDate, forecastDays) {
   }
 }
 
-function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableModels, areaMaps, profiles) {
+function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableModels, areaMaps, profiles, boundaryLayerResult) {
   const sailingHours = raceHours.map((hour) => analyzeHour(hour));
   const [executiveHours, executiveModel] = executiveSourceHours(modelRuns, raceHours, modelName);
   const executiveSailingHours = executiveHours.map((hour) => analyzeHour(hour));
@@ -608,6 +666,9 @@ function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableMo
     forecast_date: payload.date,
     race_window: `${String(payload.start_hour).padStart(2, "0")}00-${String(payload.end_hour).padStart(2, "0")}00 local`,
     model_name: modelName,
+    boundary_layer_model: boundaryLayerResult?.hours?.length ? boundaryLayerResult.model : null,
+    boundary_layer_unavailable: boundaryLayerResult?.unavailable || null,
+    profile_model: PROFILE_MODEL,
     type_of_day: dayType,
     confidence: confidence(raceHours),
     executive_summary: summary(dayType, executiveSailingHours, executiveHours, executiveModel),
@@ -617,7 +678,7 @@ function analyzeForecast(payload, modelName, raceHours, modelRuns, unavailableMo
     source_hours: raceHours,
     area_maps: areaMaps,
     area_map_mode: payload.area_map_mode,
-    model_summaries: [...summarizeModelRuns(modelRuns.slice(1), unavailableModels), "Static GitHub Pages build: Open-Meteo is fetched directly from the browser."],
+    model_summaries: [...summarizeModelRuns(modelRuns.slice(1), unavailableModels, boundaryLayerResult), "Static GitHub Pages build: Open-Meteo is fetched directly from the browser."],
     marine_summary: marineSummary(raceHours),
     model_runs: modelRuns,
     profiles,
@@ -759,12 +820,13 @@ function meteorology(hours, areaMaps) {
   const avgSurfaceSpeed = mean(hours.map((hour) => hour.wind_speed_10m));
   const gradientHours = hours.filter((hour) => hour.wind_direction_925hpa != null && hour.wind_speed_925hpa != null);
   const avgCloud = mean(hours.map((hour) => hour.cloud_cover || 0));
-  const avgBl = mean(hours.map((hour) => hour.boundary_layer_height || 0));
+  const boundaryLayerHours = hours.filter((hour) => hour.boundary_layer_height != null);
+  const avgBl = boundaryLayerHours.length ? mean(boundaryLayerHours.map((hour) => hour.boundary_layer_height || 0)) : null;
   const avgCape = mean(hours.map((hour) => hour.cape || 0));
   const bullets = [
     `Surface flow averages ${padDir(roundedDirection(avgSurfaceDir))} at ${Math.round(avgSurfaceSpeed)} kt through the race window.`,
     `Cloud cover averages ${Math.round(avgCloud)}%, so cloud impact is ${avgCloud > 55 ? "material" : "limited"}.`,
-    `Boundary layer height averages about ${Math.round(avgBl)} m; mixing potential is ${avgBl > 700 ? "good" : "shallow to moderate"}.`,
+    avgBl == null ? `Boundary layer height is unavailable from ${BOUNDARY_LAYER_MODEL}; no non-GFS boundary layer substitute is used.` : `Boundary layer height from ${BOUNDARY_LAYER_MODEL} averages about ${Math.round(avgBl)} m; mixing potential is ${avgBl > 700 ? "good" : "shallow to moderate"}.`,
     ...thermalAndPressureDiagnostics(hours, areaMaps),
   ];
   if (gradientHours.length) {
@@ -818,7 +880,8 @@ function thermalAndPressureDiagnostics(hours, areaMaps) {
 function seaBreezePotential(hours) {
   const avgSpeed = mean(hours.map((hour) => hour.wind_speed_10m));
   const avgCloud = mean(hours.map((hour) => hour.cloud_cover || 0));
-  const avgBl = mean(hours.map((hour) => hour.boundary_layer_height || 0));
+  const boundaryLayerHours = hours.filter((hour) => hour.boundary_layer_height != null);
+  const avgBl = boundaryLayerHours.length ? mean(boundaryLayerHours.map((hour) => hour.boundary_layer_height || 0)) : null;
   const avgRadiation = mean(hours.map((hour) => hour.shortwave_radiation || 0));
   const thermalTurn = angularDifference(hours[0].wind_direction_10m, hours[hours.length - 1].wind_direction_10m);
   const temperatureHours = hours.filter((hour) => hour.temperature_2m != null && hour.sea_surface_temperature != null);
@@ -858,7 +921,7 @@ function seaBreezePotential(hours) {
   } else if (avgSpeed > 16) {
     reasons.push("stronger gradient may suppress a separate sea breeze");
   }
-  if (avgBl >= 600) {
+  if (avgBl != null && avgBl >= 600) {
     score += 1;
     reasons.push("boundary layer can mix");
   }
@@ -877,8 +940,13 @@ function localEffects(raceArea) {
   ];
 }
 
-function summarizeModelRuns(modelRuns, unavailable) {
+function summarizeModelRuns(modelRuns, unavailable, boundaryLayerResult) {
   const summaries = [...(unavailable || [])];
+  if (boundaryLayerResult?.unavailable) {
+    summaries.push(boundaryLayerResult.unavailable);
+  } else if (boundaryLayerResult?.hours?.length) {
+    summaries.push(`Boundary layer source: ${boundaryLayerResult.model} only.`);
+  }
   modelRuns.forEach((run) => {
     const avgDir = circularMean(run.hours.map((hour) => hour.wind_direction_10m));
     const avgSpeed = mean(run.hours.map((hour) => hour.wind_speed_10m));
@@ -931,6 +999,8 @@ function renderForecastHtml(forecast) {
         <div>Race window: ${escapeHtml(forecast.race_window)}</div>
         <div>Race area: ${escapeHtml(forecast.race_area.name)}</div>
         <div>Primary model: ${escapeHtml(forecast.model_name)}</div>
+        <div>Boundary layer: ${escapeHtml(forecast.boundary_layer_model || "unavailable")}</div>
+        <div>Sounding: ${escapeHtml(forecast.profile_model)}</div>
         <div>Confidence: ${escapeHtml(forecast.confidence)}</div>
         <div>Source: Open-Meteo APIs direct from browser</div>
       </div>
@@ -1052,19 +1122,34 @@ function renderKeyFacts(forecast) {
 }
 
 function renderSynopticChartSection(forecast) {
-  if (!forecast.synoptic_chart_url) {
+  const rawUrl = String(forecast.synoptic_chart_url || "").trim();
+  if (!rawUrl) {
     return "";
   }
-  const url = escapeHtml(forecast.synoptic_chart_url);
-  if (isImageUrl(forecast.synoptic_chart_url)) {
-    return `<section class="panel"><h2>Synoptic Chart</h2><img class="synoptic-image" src="${url}" alt="Synoptic surface pressure chart" referrerpolicy="no-referrer"><p class="map-caption"><a href="${url}" target="_blank" rel="noreferrer">Open synoptic chart source</a></p></section>`;
+  const imageUrl = embeddableImageUrl(rawUrl);
+  const linkUrl = externalLinkUrl(rawUrl);
+  if (imageUrl) {
+    const url = escapeHtml(imageUrl);
+    const link = linkUrl ? `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noreferrer">Open synoptic chart source</a>` : "Synoptic chart source";
+    return `<section class="panel"><h2>Synoptic Chart</h2><img class="synoptic-image" src="${url}" alt="Synoptic surface pressure chart" referrerpolicy="no-referrer"><p class="map-caption">${link}</p></section>`;
   }
-  return `<section class="panel"><h2>Synoptic Chart</h2><p class="map-caption"><a href="${url}" target="_blank" rel="noreferrer">Open synoptic chart source</a></p></section>`;
+  if (linkUrl) {
+    return `<section class="panel"><h2>Synoptic Chart</h2><p class="map-caption"><a href="${escapeHtml(linkUrl)}" target="_blank" rel="noreferrer">Open synoptic chart source</a></p></section>`;
+  }
+  return "";
 }
 
-function isImageUrl(value) {
+function embeddableImageUrl(value) {
   const url = String(value || "").trim();
-  return /^data:image\//i.test(url) || /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?(#.*)?$/i.test(url);
+  if (/^data:image\//i.test(url)) {
+    return url;
+  }
+  return /^https?:\/\//i.test(url) ? url : "";
+}
+
+function externalLinkUrl(value) {
+  const url = String(value || "").trim();
+  return /^https?:\/\//i.test(url) ? url : "";
 }
 
 function render925Table(forecast) {
