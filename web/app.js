@@ -146,7 +146,6 @@ const openSeaMapLayer = L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x
   maxZoom: 18,
   attribution: "Map data &copy; OpenSeaMap contributors",
 }).addTo(map);
-L.control.layers({ "OpenStreetMap": osmLayer }, { "OpenSeaMap seamarks": openSeaMapLayer }, { collapsed: false }).addTo(map);
 
 const venueName = document.querySelector("#venue-name");
 const venueLatitude = document.querySelector("#venue-latitude");
