@@ -1233,7 +1233,7 @@ function profileChart(profile) {
   const minTemp = -50;
   const maxTemp = 35;
   const skew = 48;
-  const yAt = (pressure) => padTop + ((pressure - minPressure) / (maxPressure - minPressure)) * plotH;
+  const yAt = (pressure) => padTop + plotH - ((pressure - minPressure) / (maxPressure - minPressure)) * plotH;
   const xAt = (temperature, pressure) => {
     const base = padLeft + ((temperature - minTemp) / (maxTemp - minTemp)) * plotW;
     const skewOffset = ((maxPressure - pressure) / (maxPressure - minPressure)) * skew;
@@ -1257,7 +1257,7 @@ function profileChart(profile) {
   [-40, -20, 0, 20].forEach((temperature) => {
     const xBottom = xAt(temperature, maxPressure);
     const xTop = xAt(temperature, minPressure);
-    elements.push(`<line x1="${xBottom.toFixed(1)}" y1="${padTop + plotH}" x2="${xTop.toFixed(1)}" y2="${padTop}" stroke="#eef2f4"></line>`);
+    elements.push(`<line x1="${xBottom.toFixed(1)}" y1="${yAt(maxPressure).toFixed(1)}" x2="${xTop.toFixed(1)}" y2="${yAt(minPressure).toFixed(1)}" stroke="#eef2f4"></line>`);
     elements.push(`<text x="${xBottom.toFixed(1)}" y="${height - 14}" text-anchor="middle" font-size="10" fill="#5a6670">${temperature}</text>`);
   });
   const tempPoints = levels

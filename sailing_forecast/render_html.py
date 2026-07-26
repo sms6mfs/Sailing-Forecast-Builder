@@ -674,7 +674,7 @@ def profile_chart(profile: ForecastProfile) -> str:
         pressure = max(min_pressure, min(max_pressure, float(pressure)))
         log_min = math.log(min_pressure)
         log_max = math.log(max_pressure)
-        return pad_top + ((math.log(pressure) - log_min) / (log_max - log_min)) * plot_h
+        return pad_top + plot_h - ((math.log(pressure) - log_min) / (log_max - log_min)) * plot_h
 
     def x_at(temperature: float, pressure: int | float) -> float:
         base = pad_left + ((temperature - min_temp) / (max_temp - min_temp)) * plot_w
