@@ -64,6 +64,7 @@ class ForecastRequestHandler(SimpleHTTPRequestHandler):
                 synoptic_chart_url=payload.get("synoptic_chart_url") or None,
             )
             venue = payload["venue"]
+            race_area = payload.get("race_area") or {}
             result = build_custom_forecast_result(
                 name=venue["name"],
                 latitude=float(venue["latitude"]),
@@ -71,13 +72,13 @@ class ForecastRequestHandler(SimpleHTTPRequestHandler):
                 forecast_date=payload["date"],
                 start_hour=int(payload["start_hour"]),
                 end_hour=int(payload["end_hour"]),
-                race_area_name=venue.get("race_area_name") or "Race area",
-                race_radius_nm=float(venue.get("race_radius_nm") or 2.0),
+                race_area_name=race_area.get("name") or venue.get("race_area_name") or "Race area",
+                race_radius_nm=float(race_area.get("radius_nm") or venue.get("race_radius_nm") or 2.0),
                 event=event,
                 model=payload.get("model") or AUTO_PRIMARY_MODEL,
                 compare_models=payload.get("compare_models") or [],
                 area_map_mode=payload.get("area_map_mode") or "barbs",
-                area_grid_size=int(payload.get("area_grid_size") or 15),
+                area_grid_size=payload.get("area_grid_size") or "auto",
                 forecast_days=int(payload.get("forecast_days") or 1),
             )
         except Exception as error:

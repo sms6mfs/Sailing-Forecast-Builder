@@ -27,6 +27,9 @@ const AREA_MAP_HOURS = [11, 13, 15, 17];
 const BOUNDARY_LAYER_MODEL = "gfs_seamless";
 const PROFILE_MODEL = "ecmwf_ifs025";
 const PROFILE_PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300];
+const BASE_AREA_GRID_RADIUS_NM = 2.0;
+const DEFAULT_AREA_GRID_SIZE = 15;
+const MAX_AREA_GRID_SIZE = 41;
 
 const HIGHEST_RESOLUTION_MODEL_ORDER = [
   "meteoswiss_icon_ch1",
@@ -1533,7 +1536,7 @@ function windSpeedColor(speed) {
 
 function gridPoints(raceArea, gridSize) {
   const half = Math.max(1, Math.floor(gridSize / 2));
-  const latStep = (raceArea.radius_nm * 1.852) / 111 / 2;
+  const latStep = (raceArea.radius_nm * 1.852) / 111 / half;
   const lonStep = latStep / Math.max(0.2, Math.abs(Math.cos(raceArea.latitude * Math.PI / 180)));
   const points = [];
   for (let y = -half; y <= half; y += 1) {
@@ -1741,8 +1744,22 @@ function addCalendarDays(forecastDate, dayOffset) {
 }
 
 function normalizeAreaGridSize(value) {
-  const gridSize = Number(value || 15);
-  return [9, 15, 21].includes(gridSize) ? gridSize : 15;
+  if (!value || value === "auto") {
+    return proportionalAreaGridSize(Number(raceRadius.value || 2));
+  }
+  const gridSize = Number(value);
+  return Number.isInteger(gridSize) && gridSize >= 3 && gridSize <= MAX_AREA_GRID_SIZE && gridSize % 2 === 1
+    ? gridSize
+    : proportionalAreaGridSize(Number(raceRadius.value || 2));
+}
+
+function proportionalAreaGridSize(radiusNm) {
+  if (!Number.isFinite(radiusNm) || radiusNm <= 0) {
+    return DEFAULT_AREA_GRID_SIZE;
+  }
+  const scaled = Math.round(DEFAULT_AREA_GRID_SIZE * (radiusNm / BASE_AREA_GRID_RADIUS_NM));
+  const oddSize = scaled % 2 === 1 ? scaled : scaled + 1;
+  return Math.max(3, Math.min(MAX_AREA_GRID_SIZE, oddSize));
 }
 
 function normalizeForecastDays(value) {

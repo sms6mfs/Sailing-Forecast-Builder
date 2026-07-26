@@ -18,6 +18,9 @@ PRESSURE_LEVEL_WIND_MODEL = "ecmwf_ifs025"
 BOUNDARY_LAYER_MODEL = "gfs_seamless"
 PROFILE_MODEL = "ecmwf_ifs025"
 DEFAULT_AREA_GRID_SIZE = 15
+AUTO_AREA_GRID_SIZE = "auto"
+BASE_AREA_GRID_RADIUS_NM = 2.0
+MAX_AREA_GRID_SIZE = 41
 DEFAULT_FORECAST_DAYS = 1
 
 
@@ -31,7 +34,7 @@ def build_forecast(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> SailingForecast:
     if venue_key not in VENUES:
@@ -62,7 +65,7 @@ def build_forecast_for_venue(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> SailingForecast:
     race_area = find_race_area(venue.race_areas, race_area_name)
@@ -90,7 +93,7 @@ def build_forecast_for_venue(
     area_map_time = None
     area_maps = []
     area_map_note = None
-    normalized_grid_size = normalize_area_grid_size(area_grid_size)
+    normalized_grid_size = normalize_area_grid_size(area_grid_size, race_area.radius_nm if race_area else None)
     if race_area:
         try:
             area_maps = client.fetch_area_maps(
@@ -368,7 +371,7 @@ def build_custom_forecast_html(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> str:
     venue = custom_venue(
@@ -407,7 +410,7 @@ def build_custom_forecast_result(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> dict[str, object]:
     venue = custom_venue(
@@ -434,7 +437,7 @@ def build_custom_forecast_result(
         "html": render_forecast_html(forecast),
         "wind_maps": wind_maps_payload(forecast.area_maps),
         "area_map_mode": forecast.area_map_mode,
-        "area_grid_size": normalize_area_grid_size(area_grid_size),
+        "area_grid_size": normalize_area_grid_size(area_grid_size, forecast.race_area.radius_nm if forecast.race_area else None),
         "forecast_days": normalize_forecast_days(forecast_days),
     }
 
@@ -475,7 +478,7 @@ def build_custom_forecast_text(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> str:
     venue = custom_venue(
@@ -511,7 +514,7 @@ def build_forecast_text(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> str:
     forecast = build_forecast(
@@ -540,7 +543,7 @@ def build_forecast_html(
     model: str = AUTO_PRIMARY_MODEL,
     compare_models: list[str] | None = None,
     area_map_mode: str = "barbs",
-    area_grid_size: int = DEFAULT_AREA_GRID_SIZE,
+    area_grid_size: int | str = AUTO_AREA_GRID_SIZE,
     forecast_days: int = DEFAULT_FORECAST_DAYS,
 ) -> str:
     forecast = build_forecast(
@@ -565,14 +568,24 @@ def normalize_area_map_mode(value: str | None) -> str:
     return "barbs"
 
 
-def normalize_area_grid_size(value: int | str | None) -> int:
+def normalize_area_grid_size(value: int | str | None, radius_nm: float | None = None) -> int:
+    if value in {None, "", AUTO_AREA_GRID_SIZE}:
+        return proportional_area_grid_size(radius_nm)
     try:
-        grid_size = int(value or DEFAULT_AREA_GRID_SIZE)
+        grid_size = int(value)
     except (TypeError, ValueError):
-        return DEFAULT_AREA_GRID_SIZE
-    if grid_size in {9, 15, 21}:
+        return proportional_area_grid_size(radius_nm)
+    if 3 <= grid_size <= MAX_AREA_GRID_SIZE and grid_size % 2 == 1:
         return grid_size
-    return DEFAULT_AREA_GRID_SIZE
+    return proportional_area_grid_size(radius_nm)
+
+
+def proportional_area_grid_size(radius_nm: float | None) -> int:
+    if radius_nm is None or radius_nm <= 0:
+        return DEFAULT_AREA_GRID_SIZE
+    scaled = round(DEFAULT_AREA_GRID_SIZE * (radius_nm / BASE_AREA_GRID_RADIUS_NM))
+    odd_size = scaled if scaled % 2 == 1 else scaled + 1
+    return max(3, min(MAX_AREA_GRID_SIZE, odd_size))
 
 
 def normalize_forecast_days(value: int | str | None) -> int:

@@ -400,7 +400,7 @@ def _marine_value(marine: dict | None, index: int | None, key: str) -> float | N
 
 def grid_points(race_area: RaceArea, grid_size: int = 9) -> list[tuple[float, float]]:
     half = max(1, grid_size // 2)
-    lat_step = (race_area.radius_nm * 1.852) / 111.0 / 2
+    lat_step = (race_area.radius_nm * 1.852) / 111.0 / half
     lon_step = lat_step / max(0.2, abs(math.cos(math.radians(race_area.latitude))))
     points: list[tuple[float, float]] = []
     for y in range(-half, half + 1):

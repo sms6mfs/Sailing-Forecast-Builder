@@ -5,7 +5,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from sailing_forecast.app import DEFAULT_AREA_GRID_SIZE, DEFAULT_FORECAST_DAYS, build_custom_forecast_html, build_custom_forecast_text, build_forecast_html, build_forecast_text
+from sailing_forecast.app import AUTO_AREA_GRID_SIZE, DEFAULT_FORECAST_DAYS, build_custom_forecast_html, build_custom_forecast_text, build_forecast_html, build_forecast_text
 from sailing_forecast.model_catalog import AUTO_PRIMARY_MODEL
 from sailing_forecast.models import EventMetadata
 from sailing_forecast.report_check import verify_html_report
@@ -54,10 +54,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--area-grid-size",
-        type=int,
-        choices=(9, 15, 21),
-        default=DEFAULT_AREA_GRID_SIZE,
-        help="Forecast area sampling grid size. Higher values are slower but show more local structure.",
+        default=AUTO_AREA_GRID_SIZE,
+        help="Forecast area sampling grid size. Use auto to keep about the same spacing as 15x15 at 2 nm, or pass an odd size up to 41.",
     )
     parser.add_argument(
         "--forecast-days",
