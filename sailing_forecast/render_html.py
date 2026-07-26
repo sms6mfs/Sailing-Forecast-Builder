@@ -919,18 +919,19 @@ def render_weather_area_map(
         return "<p>No area grid data available for this map.</p>"
     zoom = 13
     tile_size = 256
+    viewport_tile_span = 4.5
     center_lat = forecast.race_area.latitude if forecast.race_area else forecast.venue.latitude
     center_lon = forecast.race_area.longitude if forecast.race_area else forecast.venue.longitude
     center_x, center_y = lat_lon_to_tile(center_lat, center_lon, zoom)
-    base_x = math.floor(center_x) - 1
-    base_y = math.floor(center_y) - 1
+    base_x = center_x - viewport_tile_span / 2
+    base_y = center_y - viewport_tile_span / 2
     speeds = [point.wind_speed_10m for point in points]
     min_speed, max_speed = min(speeds), max(speeds)
     time_label = area_map.time_label if area_map else forecast.area_map_time or "mid-race"
 
     def position(latitude: float, longitude: float) -> tuple[float, float]:
         tile_x, tile_y = lat_lon_to_tile(latitude, longitude, zoom)
-        return ((tile_x - base_x) / 3) * width, ((tile_y - base_y) / 3) * height
+        return ((tile_x - base_x) / viewport_tile_span) * width, ((tile_y - base_y) / viewport_tile_span) * height
 
     elements = [
         f'<rect x="1" y="1" width="{width - 2}" height="{height - 2}" fill="none" stroke="#172027" stroke-width="2" />',
@@ -968,7 +969,7 @@ def render_weather_area_map(
         cx, cy = position(forecast.race_area.latitude, forecast.race_area.longitude)
         meters_per_pixel = 156543.03392 * math.cos(math.radians(center_lat)) / (2 ** zoom)
         radius_px = (forecast.race_area.radius_nm * 1852) / meters_per_pixel
-        radius = (radius_px / (tile_size * 3)) * width
+        radius = (radius_px / (tile_size * viewport_tile_span)) * width
         elements.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{radius:.1f}" fill="#1e6a8d" fill-opacity="0.12" stroke="#1e6a8d" stroke-width="2" />')
         elements.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="5" fill="#b84b42" stroke="#ffffff" stroke-width="2" />')
         elements.append(f'<text x="{cx:.1f}" y="{cy - 14:.1f}" text-anchor="middle" font-size="11" fill="#172027">{escape(forecast.race_area.name)}</text>')
@@ -980,16 +981,16 @@ def render_weather_area_map(
         f'<text x="16" y="{height - 15}" font-size="10" fill="#5a6670">TWS {min_speed:.0f}-{max_speed:.0f} kt</text>'
     )
     images = []
-    for y_index in range(3):
-        for x_index in range(3):
-            x = base_x + x_index
-            y = base_y + y_index
-            left = x_index * 33.3334
-            top = y_index * 33.3334
+    tile_width_percent = 100 / viewport_tile_span
+    for y in range(math.floor(base_y), math.ceil(base_y + viewport_tile_span)):
+        for x in range(math.floor(base_x), math.ceil(base_x + viewport_tile_span)):
+            left = ((x - base_x) / viewport_tile_span) * 100
+            top = ((y - base_y) / viewport_tile_span) * 100
             osm_url = f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png"
             seamark_url = f"https://tiles.openseamap.org/seamark/{zoom}/{x}/{y}.png"
-            images.append(f'<img src="{osm_url}" alt="" style="left:{left:.4f}%; top:{top:.4f}%;">')
-            images.append(f'<img src="{seamark_url}" alt="" style="left:{left:.4f}%; top:{top:.4f}%;">')
+            tile_style = f"left:{left:.4f}%; top:{top:.4f}%; width:{tile_width_percent:.4f}%; height:{tile_width_percent:.4f}%;"
+            images.append(f'<img src="{osm_url}" alt="" style="{tile_style}">')
+            images.append(f'<img src="{seamark_url}" alt="" style="{tile_style}">')
     return (
         '<div class="tile-map forecast-tile-map">'
         + "".join(images)

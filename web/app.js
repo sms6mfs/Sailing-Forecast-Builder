@@ -1306,17 +1306,18 @@ function renderWeatherAreaMap(forecast, areaMap) {
   const width = 520;
   const height = 520;
   const zoom = 13;
+  const viewportTileSpan = 4.5;
   const centerLat = forecast.race_area.latitude;
   const centerLon = forecast.race_area.longitude;
   const [centerX, centerY] = latLonToTile(centerLat, centerLon, zoom);
-  const baseX = Math.floor(centerX) - 1;
-  const baseY = Math.floor(centerY) - 1;
+  const baseX = centerX - viewportTileSpan / 2;
+  const baseY = centerY - viewportTileSpan / 2;
   const speeds = points.map((point) => point.wind_speed_10m);
   const minSpeed = Math.min(...speeds);
   const maxSpeed = Math.max(...speeds);
   const position = (latitude, longitude) => {
     const [tileX, tileY] = latLonToTile(latitude, longitude, zoom);
-    return [((tileX - baseX) / 3) * width, ((tileY - baseY) / 3) * height];
+    return [((tileX - baseX) / viewportTileSpan) * width, ((tileY - baseY) / viewportTileSpan) * height];
   };
   const elements = [
     `<rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="none" stroke="#172027" stroke-width="2"></rect>`,
@@ -1333,16 +1334,18 @@ function renderWeatherAreaMap(forecast, areaMap) {
   });
   const [cx, cy] = position(forecast.race_area.latitude, forecast.race_area.longitude);
   const metersPerPixel = 156543.03392 * Math.cos(centerLat * Math.PI / 180) / (2 ** zoom);
-  const radius = ((forecast.race_area.radius_nm * 1852) / metersPerPixel / (256 * 3)) * width;
+  const radius = ((forecast.race_area.radius_nm * 1852) / metersPerPixel / (256 * viewportTileSpan)) * width;
   elements.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius.toFixed(1)}" fill="#1e6a8d" fill-opacity="0.12" stroke="#1e6a8d" stroke-width="2"></circle>`);
   elements.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="#b84b42" stroke="#ffffff" stroke-width="2"></circle>`);
   const images = [];
-  for (let yIndex = 0; yIndex < 3; yIndex += 1) {
-    for (let xIndex = 0; xIndex < 3; xIndex += 1) {
-      const x = baseX + xIndex;
-      const y = baseY + yIndex;
-      images.push(`<img src="https://tile.openstreetmap.org/${zoom}/${x}/${y}.png" alt="" style="left:${(xIndex * 33.3334).toFixed(4)}%; top:${(yIndex * 33.3334).toFixed(4)}%;">`);
-      images.push(`<img src="https://tiles.openseamap.org/seamark/${zoom}/${x}/${y}.png" alt="" style="left:${(xIndex * 33.3334).toFixed(4)}%; top:${(yIndex * 33.3334).toFixed(4)}%;">`);
+  const tileSizePercent = 100 / viewportTileSpan;
+  for (let y = Math.floor(baseY); y < Math.ceil(baseY + viewportTileSpan); y += 1) {
+    for (let x = Math.floor(baseX); x < Math.ceil(baseX + viewportTileSpan); x += 1) {
+      const left = ((x - baseX) / viewportTileSpan) * 100;
+      const top = ((y - baseY) / viewportTileSpan) * 100;
+      const tileStyle = `left:${left.toFixed(4)}%; top:${top.toFixed(4)}%; width:${tileSizePercent.toFixed(4)}%; height:${tileSizePercent.toFixed(4)}%;`;
+      images.push(`<img src="https://tile.openstreetmap.org/${zoom}/${x}/${y}.png" alt="" style="${tileStyle}">`);
+      images.push(`<img src="https://tiles.openseamap.org/seamark/${zoom}/${x}/${y}.png" alt="" style="${tileStyle}">`);
     }
   }
   return `<div class="tile-map">${images.join("")}<svg class="wind-overlay" viewBox="0 0 ${width} ${height}" role="img" aria-label="Forecast area weather map">${elements.join("")}</svg></div>`;
