@@ -1222,7 +1222,7 @@ function profileChart(profile) {
   }
   const width = 760;
   const height = 430;
-  const padLeft = 64;
+  const padLeft = 98;
   const padRight = 118;
   const padTop = 26;
   const padBottom = 44;
@@ -1233,11 +1233,16 @@ function profileChart(profile) {
   const minTemp = -50;
   const maxTemp = 35;
   const skew = 48;
-  const yAt = (pressure) => padTop + plotH - ((pressure - minPressure) / (maxPressure - minPressure)) * plotH;
+  const yAt = (pressure) => padTop + ((pressure - minPressure) / (maxPressure - minPressure)) * plotH;
   const xAt = (temperature, pressure) => {
     const base = padLeft + ((temperature - minTemp) / (maxTemp - minTemp)) * plotW;
     const skewOffset = ((maxPressure - pressure) / (maxPressure - minPressure)) * skew;
     return base + skewOffset;
+  };
+  const pressureHeightLabel = (pressure) => {
+    const heightM = 44330 * (1 - ((Number(pressure) || 0) / 1013.25) ** 0.1903);
+    const height = heightM < 1000 ? `${Math.round(heightM / 50) * 50} m` : `${(heightM / 1000).toFixed(1)} km`;
+    return `${pressure} hPa / ${height}`;
   };
   const elements = [
     `<rect x="1" y="1" width="${width - 2}" height="${height - 2}" fill="#ffffff" stroke="#d8e0e5"></rect>`,
@@ -1252,7 +1257,7 @@ function profileChart(profile) {
   [1000, 925, 850, 700, 500, 300].forEach((pressure) => {
     const y = yAt(pressure);
     elements.push(`<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${width - padRight}" y2="${y.toFixed(1)}" stroke="#e7ecef"></line>`);
-    elements.push(`<text x="14" y="${(y + 4).toFixed(1)}" font-size="11" fill="#5a6670">${pressure}</text>`);
+    elements.push(`<text x="8" y="${(y + 4).toFixed(1)}" font-size="11" fill="#5a6670">${pressureHeightLabel(pressure)}</text>`);
   });
   [-40, -20, 0, 20].forEach((temperature) => {
     const xBottom = xAt(temperature, maxPressure);

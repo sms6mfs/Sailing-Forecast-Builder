@@ -658,7 +658,7 @@ def profile_chart(profile: ForecastProfile) -> str:
 
     width = 760
     height = 430
-    pad_left = 64
+    pad_left = 98
     pad_right = 118
     pad_top = 26
     pad_bottom = 44
@@ -674,11 +674,19 @@ def profile_chart(profile: ForecastProfile) -> str:
         pressure = max(min_pressure, min(max_pressure, float(pressure)))
         log_min = math.log(min_pressure)
         log_max = math.log(max_pressure)
-        return pad_top + plot_h - ((math.log(pressure) - log_min) / (log_max - log_min)) * plot_h
+        return pad_top + ((math.log(pressure) - log_min) / (log_max - log_min)) * plot_h
 
     def x_at(temperature: float, pressure: int | float) -> float:
         base = pad_left + ((temperature - min_temp) / (max_temp - min_temp)) * plot_w
         return base + ((max_pressure - float(pressure)) / (max_pressure - min_pressure)) * skew
+
+    def pressure_height_label(pressure: int | float) -> str:
+        height_m = 44330 * (1 - (float(pressure) / 1013.25) ** 0.1903)
+        if height_m < 1000:
+            height = f"{round(height_m / 50) * 50:.0f} m"
+        else:
+            height = f"{height_m / 1000:.1f} km"
+        return f"{pressure:g} hPa / {height}"
 
     elements: list[str] = [
         '<rect x="0" y="0" width="100%" height="100%" fill="#ffffff" />',
@@ -688,7 +696,9 @@ def profile_chart(profile: ForecastProfile) -> str:
     for pressure in (1000, 925, 850, 700, 600, 500, 400, 300):
         y = y_at(pressure)
         elements.append(f'<line x1="{pad_left}" y1="{y:.1f}" x2="{width - pad_right}" y2="{y:.1f}" stroke="#e7ecef" />')
-        elements.append(f'<text x="{pad_left - 10}" y="{y + 4:.1f}" text-anchor="end" font-size="11" fill="#5a6670">{pressure}</text>')
+        elements.append(
+            f'<text x="{pad_left - 10}" y="{y + 4:.1f}" text-anchor="end" font-size="11" fill="#5a6670">{pressure_height_label(pressure)}</text>'
+        )
 
     for temperature in range(-50, 41, 10):
         x_bottom = x_at(temperature, max_pressure)
